@@ -74,6 +74,7 @@ When done, you MUST add the following to handoff/latest.md:
 - Important: [list if any]
 - Minor: [list if any]
 - Good: [what was done well]
+- Carry over to next Task: [issues found in this review that should be addressed in a future Task, or "none"]
 - Next step:
   - APPROVE → committed + pushed, move to next Task in queue
   - REQUEST_CHANGES → Developer fixes Critical issues, then re-review
