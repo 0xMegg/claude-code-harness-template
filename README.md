@@ -15,6 +15,71 @@ Claude Code & Cowork 마스터 가이드(583p) 기반 재사용 가능 작업 �
 | 커밋 형식 | `type: description` | **`type: Task N — 변경 요약`** |
 | 파일 간 연결 | CLAUDE.md에서 일부만 참조 | **전체 구조 참조 (roles, rules, skills, outputs)** |
 
+## 새 프로젝트 시작 가이드
+
+### 준비물
+- 이 템플릿 (`claude-code-harness-template/`)
+- 프로젝트 기획안 (`docs/project-plan.md` 형식 권장)
+- Claude Code CLI (`claude`)
+
+### Step 1: 프로젝트 생성 + 하네스 복사
+
+```bash
+# 프로젝트 디렉토리 생성 (또는 기존 프로젝트로 이동)
+mkdir my-new-app && cd my-new-app
+git init
+
+# 하네스 템플릿 복사
+/path/to/claude-code-harness-template/setup.sh my-new-app
+```
+
+### Step 2: 기획안 작성
+
+```bash
+# 템플릿에서 기획안 양식 복사
+cp /path/to/claude-code-harness-template/docs/project-plan.md docs/project-plan.md
+
+# 기획안 작성 (직접 채우거나, 기존 기획서를 이 형식에 맞게 정리)
+```
+
+### Step 3: Claude에게 하네스 초기화 요청
+
+```bash
+claude "docs/project-plan.md를 읽고 다음 파일의 {{PLACEHOLDER}}를 모두 채워줘:
+- CLAUDE.md
+- context/about-me.md
+- templates/role-planner.md
+- templates/role-developer.md
+- templates/role-reviewer.md
+그리고 .claude/rules/도 이 프로젝트에 맞게 수정해줘.
+.claude/hooks/post-edit-check.sh에 프로젝트 특화 검사 패턴도 추가해줘."
+```
+
+### Step 4: 개발 시작
+
+```bash
+# Planner → Developer → Reviewer 순서로 반복
+claude "templates/role-planner.md 역할로 Task 1 진행해."
+claude "templates/role-developer.md 역할로 Task 1 구현해."
+claude "templates/role-reviewer.md 역할로 Task 1 검사해."
+```
+
+### 전체 흐름 요약
+
+```
+기획안 작성
+    ↓
+setup.sh 실행 → 하네스 파일 복사
+    ↓
+Claude에게 placeholder 채우기 요청 → 프로젝트 맞춤 설정 완료
+    ↓
+Planner → Developer → Reviewer 반복 → 개발 진행
+    ↓
+(매 Task마다 handoff/latest.md가 자동 업데이트되어 상태 유지)
+```
+
+---
+
 ## 구조
 
 ```
@@ -49,6 +114,8 @@ project/
 │   ├── plans/                             # Planner 산출물
 │   ├── reviews/                           # Reviewer 산출물
 │   └── archive/                           # 해결된 과거 문서
+├── docs/
+│   └── project-plan.md                    # 프로젝트 기획안 템플릿
 ├── setup.sh                               # 새 프로젝트 초기화 스크립트
 ├── PlaceholderGuide.md                    # {{PLACEHOLDER}} 채우기 가이드
 └── README.md
