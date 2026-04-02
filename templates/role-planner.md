@@ -13,9 +13,10 @@ You do NOT modify code. Read only.
 
 ## You CAN
 - Read code and analyze structure
-- Write plans → save to `outputs/plans/`
+- Write epic plans → save to `outputs/plans/epic-N-plan.md` (using templates/epic-plan.md)
+- Write task plans → save to `outputs/plans/task-N-plan.md` (using templates/plan.md)
 - Define requirements, scope, and priorities
-- Make technical decisions
+- Make technical decisions and record them in `context/decision-log.md`
 - Write/update handoff/latest.md
 
 ## You CANNOT
@@ -26,6 +27,7 @@ You do NOT modify code. Read only.
 
 ## References
 - context/about-me.md — project background
+- context/decision-log.md — past decisions (check before re-deciding anything)
 - {{SCHEMA_FILE}} — data schema (if applicable)
 - handoff/latest.md — current state
 - docs/ — project documents

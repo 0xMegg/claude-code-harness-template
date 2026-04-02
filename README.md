@@ -42,23 +42,30 @@ claude "docs/에 있는 기획안을 읽고, PlaceholderGuide.md를 참고해서
 
 > 이 세션이 끝나면 하네스가 프로젝트에 맞게 완성됩니다.
 
-### Step 4: 개발 시작 (3-Role 반복)
+### Step 4: 개발 시작
 
+**작은 작업 (리팩터링, 버그 수정)** — Task 단위로 바로 진행:
 ```bash
-# 1. Planner — 계획 작성 (코드 읽기만)
 claude "templates/role-planner.md 역할로 Task 1 진행해."
-
-# 2. Developer — 구현 + 검증 (커밋 안 함)
 claude "templates/role-developer.md 역할로 Task 1 구현해."
-
-# 3. Reviewer — 검사 후 APPROVE 시 자동 커밋+푸시
 claude "templates/role-reviewer.md 역할로 Task 1 검사해."
+```
+
+**큰 기능 (새 화면, 새 기능)** — Epic 분해 먼저:
+```bash
+# 1. Epic 분해
+claude "templates/role-planner.md 역할로, 다음 기능을 Epic으로 분해해줘: [기능 설명]"
+
+# 2. Slice 단위로 3-Role 반복
+claude "templates/role-planner.md 역할로 Epic 1의 Slice 1 진행해."
+claude "templates/role-developer.md 역할로 Epic 1의 Slice 1 구현해."
+claude "templates/role-reviewer.md 역할로 Epic 1의 Slice 1 검사해."
 ```
 
 **REQUEST_CHANGES가 나오면:**
 ```bash
-claude "templates/role-developer.md 역할로 Task 1 수정사항 반영해."
-claude "templates/role-reviewer.md 역할로 Task 1 재검사해."
+claude "templates/role-developer.md 역할로 수정사항 반영해."
+claude "templates/role-reviewer.md 역할로 재검사해."
 ```
 
 ### 전체 흐름
@@ -68,9 +75,10 @@ claude "templates/role-reviewer.md 역할로 Task 1 재검사해."
   ↓
 초기화 세션: 기획안 읽고 하네스 설정 완성
   ↓
-Planner → Developer → Reviewer 반복
+큰 기능 → Epic 분해 (Planner) → Slice별 3-Role 반복
+작은 작업 → Task별 3-Role 반복
   ↓
-(handoff/latest.md가 자동 업데이트되어 세션 간 상태 유지)
+(handoff/latest.md + decision-log.md가 자동 업데이트되어 세션 간 상태 유지)
 ```
 
 ---
@@ -98,7 +106,8 @@ handoff/latest.md에 Task Queue로 정리해줘."
 | 세션 | 언제 쓰는지 | 프롬프트 |
 |------|-----------|---------|
 | **초기화** | 프로젝트 시작할 때 1번 | `"기획안 읽고 placeholder 채워줘"` |
-| **Planner** | Task마다 첫 번째 | `"role-planner.md 역할로 Task N 진행해"` |
+| **Epic 분해** | 큰 기능 시작할 때 | `"role-planner.md 역할로, 이 기능을 Epic으로 분해해줘"` |
+| **Planner** | Task/Slice마다 첫 번째 | `"role-planner.md 역할로 Task N 진행해"` |
 | **Developer** | Task마다 두 번째 | `"role-developer.md 역할로 Task N 구현해"` |
 | **Reviewer** | Task마다 세 번째 | `"role-reviewer.md 역할로 Task N 검사해"` |
 | **일반** | 간단한 질문/수정 | 역할 지정 없이 자유롭게 |
@@ -122,12 +131,14 @@ project/
 │       └── git.md                         # 커밋/브랜치 규칙
 ├── context/
 │   ├── about-me.md                        # 프로젝트 배경
-│   └── working-rules.md                   # 작업 원칙 + 3-Role Protocol
+│   ├── working-rules.md                   # 작업 원칙 + 3-Role Protocol
+│   └── decision-log.md                    # 결정 기록 (재논의 방지)
 ├── templates/
 │   ├── role-planner.md                    # Planner 역할
 │   ├── role-developer.md                  # Developer 역할
 │   ├── role-reviewer.md                   # Reviewer 역할
-│   ├── plan.md                            # 작업 계획 형식
+│   ├── epic-plan.md                       # Epic → Slice 분해 형식
+│   ├── plan.md                            # 작업 계획 형식 (per slice/task)
 │   ├── handoff.md                         # 세션 인수인계 형식
 │   └── bug-fix.md                         # 버그 수정 형식
 ├── skills/

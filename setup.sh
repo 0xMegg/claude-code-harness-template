@@ -57,6 +57,7 @@ cp "$TEMPLATE_DIR/.claude/rules/"*.md "$TARGET_DIR/.claude/rules/"
 # Copy context, templates, skills, docs
 echo "[5/6] Copying context, templates, skills, and docs..."
 cp "$TEMPLATE_DIR/context/"*.md "$TARGET_DIR/context/"
+# decision-log.md is included via context/*.md copy above
 cp "$TEMPLATE_DIR/templates/"*.md "$TARGET_DIR/templates/"
 cp "$TEMPLATE_DIR/skills/bug-fix/SKILL.md" "$TARGET_DIR/skills/bug-fix/SKILL.md"
 cp "$TEMPLATE_DIR/skills/code-review/SKILL.md" "$TARGET_DIR/skills/code-review/SKILL.md"

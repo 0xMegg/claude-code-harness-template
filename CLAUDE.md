@@ -53,6 +53,7 @@
 - `{{SCHEMA_FILE}}` — data schema (source of truth), if applicable
 - `context/about-me.md` — project background and goals
 - `context/working-rules.md` — work principles and protocols
+- `context/decision-log.md` — past decisions and rationale (prevents re-litigating)
 - `handoff/latest.md` — current state and task queue (read at every session start)
 
 ## 3-Role Workflow
@@ -61,7 +62,8 @@
 - `templates/role-reviewer.md` — Reviewer: reviews, commits + pushes on APPROVE
 
 ## Templates & Skills
-- `templates/plan.md` — work plan format
+- `templates/epic-plan.md` — epic decomposition into slices
+- `templates/plan.md` — work plan format (per slice/task)
 - `templates/handoff.md` — session handoff format
 - `templates/bug-fix.md` — bug fix workflow format
 - `skills/bug-fix/` — 7-step bug fix workflow
