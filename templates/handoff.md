@@ -1,28 +1,26 @@
 # Session Handoff
 
 ## Date
-{{DATE}}
+[날짜]
 
 ## What Was Done
-- {{CHANGE_1}}
-- {{CHANGE_2}}
-- {{CHANGE_3}}
+- [변경 1]
+- [변경 2]
 
 ## Files Changed
-- `{{FILE_1}}` — {{WHY}}
-- `{{FILE_2}}` — {{WHY}}
+- `[파일 경로]` — [변경 이유]
 
-## Current State
-- Tests: PASS / FAIL (details: {{DETAILS}})
+## Verification
+- Lint/Analyze: PASS / FAIL (details: [상세])
+- Test: PASS / FAIL / 해당 테스트 없음
 - Build: PASS / FAIL
-- Lint: PASS / FAIL
 
 ## What's Next
-1. {{NEXT_TASK_1}}
-2. {{NEXT_TASK_2}}
+1. [다음 작업 1]
+2. [다음 작업 2]
 
 ## Open Issues / Risks
-- {{ISSUE_1}}
+- [미해결 사항]
 
 ## Decisions Made
-- {{DECISION_1}}: chose {{OPTION}} because {{REASON}}
+- [결정 사항]: [선택한 옵션] because [이유]

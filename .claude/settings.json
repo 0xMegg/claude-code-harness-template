@@ -5,7 +5,14 @@
       "Glob",
       "Grep",
       "Write",
-      "Edit"
+      "Edit",
+      "Bash(git commit *)",
+      "Bash(git add *)",
+      "Bash(git push)",
+      "Bash(git push *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)"
     ],
     "deny": [
       "Bash(rm -rf *)",

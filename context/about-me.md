@@ -7,16 +7,15 @@
 {{ONE_PARAGRAPH_DESCRIPTION}}
 
 ## Tech Stack
-- Frontend: {{FRONTEND}} (e.g., Next.js 15, React 19, TypeScript)
-- Backend: {{BACKEND}} (e.g., Node.js, Python/FastAPI)
-- Database: {{DATABASE}} (e.g., PostgreSQL, MongoDB)
-- Hosting: {{HOSTING}} (e.g., Vercel, AWS)
+- Frontend: {{FRONTEND}}
+- Backend: {{BACKEND}}
+- Database: {{DATABASE}}
+- Hosting: {{HOSTING}}
 
 ## Key Directories
-- `src/app/` — pages and routing
-- `src/components/` — reusable UI components
-- `src/lib/` — utilities and shared logic
-- `src/api/` or `pages/api/` — API routes
+- `{{SRC_DIR}}` — 소스 코드
+- `{{TEST_DIR}}` — 테스트
+- `{{CONFIG_DIR}}` — 설정 파일
 
 ## Current State
 - [ ] MVP / Prototype
