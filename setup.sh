@@ -62,9 +62,15 @@ cp "$TEMPLATE_DIR/templates/"*.md "$TARGET_DIR/templates/"
 cp "$TEMPLATE_DIR/skills/bug-fix/SKILL.md" "$TARGET_DIR/skills/bug-fix/SKILL.md"
 cp "$TEMPLATE_DIR/skills/code-review/SKILL.md" "$TARGET_DIR/skills/code-review/SKILL.md"
 
-# PlaceholderGuide 복사
+# PlaceholderGuide 복사 (AI가 초기화 세션에서 참고)
 if [ -f "$TEMPLATE_DIR/PlaceholderGuide.md" ]; then
   cp "$TEMPLATE_DIR/PlaceholderGuide.md" "$TARGET_DIR/PlaceholderGuide.md"
+fi
+
+# 기획안 양식 복사
+mkdir -p "$TARGET_DIR/docs"
+if [ -f "$TEMPLATE_DIR/docs/project-plan.md" ]; then
+  cp "$TEMPLATE_DIR/docs/project-plan.md" "$TARGET_DIR/docs/project-plan.md"
 fi
 
 # 프로젝트명 치환
@@ -133,15 +139,19 @@ echo ""
 echo "=== Setup Complete (v2.0.0) ==="
 echo ""
 echo "Next steps:"
-echo "  1. Edit CLAUDE.md — fill in build/test commands and tech stack"
-echo "  2. Edit context/about-me.md — describe your project"
-echo "  3. Edit templates/role-*.md — fill in {{LINT_CMD}}, {{TEST_CMD}}"
-echo "  4. Review .claude/rules/ — customize for your stack"
-echo "  5. Start Claude Code: claude \"templates/role-planner.md 역할로 Task 1 진행해.\""
+echo "  1. 기획안을 docs/project-plan.md에 작성 (또는 기존 기획서를 docs/에 넣기)"
+echo "  2. 초기화 세션 실행:"
 echo ""
-echo "3-Role Workflow:"
-echo "  Planner → Developer → Reviewer"
-echo "  (각 세션에서 역할 파일을 지시하면 됩니다)"
+echo "     claude \"docs/에 있는 기획안을 읽고, PlaceholderGuide.md를 참고해서"
+echo "     하네스의 모든 {{PLACEHOLDER}}를 채워줘."
+echo "     대상: CLAUDE.md, context/about-me.md, templates/role-*.md"
+echo "     그리고 .claude/rules/와 .claude/hooks/post-edit-check.sh도"
+echo "     이 프로젝트에 맞게 수정해줘.\""
+echo ""
+echo "  3. 개발 시작:"
+echo "     claude \"templates/role-planner.md 역할로 Task 1 진행해.\""
+echo "     claude \"templates/role-developer.md 역할로 Task 1 구현해.\""
+echo "     claude \"templates/role-reviewer.md 역할로 Task 1 검사해.\""
 echo ""
 echo "Files created:"
 find "$TARGET_DIR" -not -path "*/node_modules/*" -not -path "*/.git/*" \

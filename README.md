@@ -2,81 +2,110 @@
 
 Claude Code & Cowork 마스터 가이드(583p) 기반 재사용 가능 작업 환경 템플릿.
 
-## v1 → v2 변경사항
+> **인간은 이 README.md만 읽으면 됩니다.** 나머지 문서는 Claude가 알아서 읽고 처리합니다.
 
-| 개선 | v1 | v2 |
-|------|----|----|
-| 워크플로우 | 단일 세션 | **3-Role (Planner → Developer → Reviewer)** |
-| 커밋 권한 | 명시 없음 | **Reviewer만 APPROVE 후 커밋+푸시** |
-| settings.json | Read/Write만 허용 | **git, lint, test Bash 명령 자동 허가** |
-| 산출물 관리 | outputs/ 단일 폴더 | **outputs/plans/, reviews/, archive/ 분리** |
-| Session Protocol | 한 AI가 전부 수행 | **역할별 분리 + 일반 세션 fallback** |
-| 브랜치 규칙 | "main 직접 푸시 금지" 고정 | **Solo/협업 구분** |
-| 커밋 형식 | `type: description` | **`type: Task N — 변경 요약`** |
-| 파일 간 연결 | CLAUDE.md에서 일부만 참조 | **전체 구조 참조 (roles, rules, skills, outputs)** |
+---
 
-## 새 프로젝트 시작 가이드
+## 새 프로젝트 시작하기
 
 ### 준비물
-- 이 템플릿 (`claude-code-harness-template/`)
-- 프로젝트 기획안 (`docs/project-plan.md` 형식 권장)
+- 이 템플릿 레포
+- 프로젝트 기획안 (자유 형식 OK, `docs/project-plan.md` 양식 제공)
 - Claude Code CLI (`claude`)
 
 ### Step 1: 프로젝트 생성 + 하네스 복사
 
 ```bash
-# 프로젝트 디렉토리 생성 (또는 기존 프로젝트로 이동)
 mkdir my-new-app && cd my-new-app
 git init
 
-# 하네스 템플릿 복사
+# 하네스 복사 (프로젝트 이름을 인자로)
 /path/to/claude-code-harness-template/setup.sh my-new-app
 ```
 
-### Step 2: 기획안 작성
+### Step 2: 기획안 넣기
 
 ```bash
-# 템플릿에서 기획안 양식 복사
+# 방법 A: 양식 복사 후 직접 채우기
 cp /path/to/claude-code-harness-template/docs/project-plan.md docs/project-plan.md
 
-# 기획안 작성 (직접 채우거나, 기존 기획서를 이 형식에 맞게 정리)
+# 방법 B: 기존 기획서가 있으면 그냥 docs/에 넣기
+cp ~/my-plan.pdf docs/
+cp ~/my-plan.md docs/
 ```
 
-### Step 3: Claude에게 하네스 초기화 요청
+### Step 3: 초기화 세션 (Claude가 하네스 설정을 채움)
 
 ```bash
-claude "docs/project-plan.md를 읽고 다음 파일의 {{PLACEHOLDER}}를 모두 채워줘:
-- CLAUDE.md
-- context/about-me.md
-- templates/role-planner.md
-- templates/role-developer.md
-- templates/role-reviewer.md
-그리고 .claude/rules/도 이 프로젝트에 맞게 수정해줘.
-.claude/hooks/post-edit-check.sh에 프로젝트 특화 검사 패턴도 추가해줘."
+claude "docs/에 있는 기획안을 읽고, PlaceholderGuide.md를 참고해서
+하네스의 모든 {{PLACEHOLDER}}를 채워줘.
+대상: CLAUDE.md, context/about-me.md, templates/role-*.md
+그리고 .claude/rules/와 .claude/hooks/post-edit-check.sh도
+이 프로젝트에 맞게 수정해줘."
 ```
 
-### Step 4: 개발 시작
+> 이 세션이 끝나면 하네스가 프로젝트에 맞게 완성됩니다.
+
+### Step 4: 개발 시작 (3-Role 반복)
 
 ```bash
-# Planner → Developer → Reviewer 순서로 반복
+# 1. Planner — 계획 작성 (코드 읽기만)
 claude "templates/role-planner.md 역할로 Task 1 진행해."
+
+# 2. Developer — 구현 + 검증 (커밋 안 함)
 claude "templates/role-developer.md 역할로 Task 1 구현해."
+
+# 3. Reviewer — 검사 후 APPROVE 시 자동 커밋+푸시
 claude "templates/role-reviewer.md 역할로 Task 1 검사해."
 ```
 
-### 전체 흐름 요약
+**REQUEST_CHANGES가 나오면:**
+```bash
+claude "templates/role-developer.md 역할로 Task 1 수정사항 반영해."
+claude "templates/role-reviewer.md 역할로 Task 1 재검사해."
+```
+
+### 전체 흐름
 
 ```
-기획안 작성
-    ↓
-setup.sh 실행 → 하네스 파일 복사
-    ↓
-Claude에게 placeholder 채우기 요청 → 프로젝트 맞춤 설정 완료
-    ↓
-Planner → Developer → Reviewer 반복 → 개발 진행
-    ↓
-(매 Task마다 handoff/latest.md가 자동 업데이트되어 상태 유지)
+[인간] 기획안 작성 + setup.sh 실행
+  ↓
+[초기화 세션] Claude가 기획안 읽고 하네스 설정 완성
+  ↓
+[Planner] → [Developer] → [Reviewer] 반복
+  ↓
+(handoff/latest.md가 자동 업데이트되어 세션 간 상태 유지)
 ```
+
+---
+
+## 기존 프로젝트에 적용하기
+
+```bash
+cd /path/to/existing-project
+/path/to/claude-code-harness-template/setup.sh my-existing-app
+
+# 초기화 세션에서 기존 코드 분석도 요청
+claude "이 프로젝트의 코드를 분석하고, PlaceholderGuide.md를 참고해서
+하네스의 모든 {{PLACEHOLDER}}를 채워줘.
+대상: CLAUDE.md, context/about-me.md, templates/role-*.md
+그리고 .claude/rules/와 .claude/hooks/post-edit-check.sh도
+이 프로젝트에 맞게 수정해줘.
+추가로 프로젝트의 좋은 점, 개선할 점, 바로 고쳐야 할 점을 분석해서
+handoff/latest.md에 Task Queue로 정리해줘."
+```
+
+---
+
+## 세션 종류 요약
+
+| 세션 | 언제 쓰는지 | 프롬프트 |
+|------|-----------|---------|
+| **초기화** | 프로젝트 시작할 때 1번 | `"기획안 읽고 placeholder 채워줘"` |
+| **Planner** | Task마다 첫 번째 | `"role-planner.md 역할로 Task N 진행해"` |
+| **Developer** | Task마다 두 번째 | `"role-developer.md 역할로 Task N 구현해"` |
+| **Reviewer** | Task마다 세 번째 | `"role-reviewer.md 역할로 Task N 검사해"` |
+| **일반** | 간단한 질문/수정 | 역할 지정 없이 자유롭게 |
 
 ---
 
@@ -84,7 +113,7 @@ Planner → Developer → Reviewer 반복 → 개발 진행
 
 ```
 project/
-├── CLAUDE.md                              # 프로젝트 계약서
+├── CLAUDE.md                              # 프로젝트 계약서 (AI 진입점)
 ├── .claude/
 │   ├── settings.json                      # 권한/안전 설정
 │   ├── hooks/
@@ -99,9 +128,9 @@ project/
 │   ├── about-me.md                        # 프로젝트 배경
 │   └── working-rules.md                   # 작업 원칙 + 3-Role Protocol
 ├── templates/
-│   ├── role-planner.md                    # Planner 역할 (NEW in v2)
-│   ├── role-developer.md                  # Developer 역할 (NEW in v2)
-│   ├── role-reviewer.md                   # Reviewer 역할 (NEW in v2)
+│   ├── role-planner.md                    # Planner 역할
+│   ├── role-developer.md                  # Developer 역할
+│   ├── role-reviewer.md                   # Reviewer 역할
 │   ├── plan.md                            # 작업 계획 형식
 │   ├── handoff.md                         # 세션 인수인계 형식
 │   └── bug-fix.md                         # 버그 수정 형식
@@ -115,53 +144,27 @@ project/
 │   ├── reviews/                           # Reviewer 산출물
 │   └── archive/                           # 해결된 과거 문서
 ├── docs/
-│   └── project-plan.md                    # 프로젝트 기획안 템플릿
+│   └── project-plan.md                    # 프로젝트 기획안 양식
+├── PlaceholderGuide.md                    # AI용: placeholder 채우기 가이드
 ├── setup.sh                               # 새 프로젝트 초기화 스크립트
-├── PlaceholderGuide.md                    # {{PLACEHOLDER}} 채우기 가이드
-└── README.md
+└── README.md                              # 인간용: 이 문서
 ```
 
-## 사용법
+### 문서 역할 구분
 
-### 새 프로젝트에 적용
+| 문서 | 누가 읽는지 | 용도 |
+|------|-----------|------|
+| `README.md` | **인간** | 시작 가이드, 사용법 |
+| `PlaceholderGuide.md` | **AI (초기화 세션)** | placeholder 채우기 규칙 |
+| `docs/project-plan.md` | **인간 → AI** | 인간이 채우고, AI가 읽어서 하네스 설정 |
+| 나머지 전부 | **AI** | 세션마다 자동으로 읽고 따름 |
 
-```bash
-cd /path/to/your-project
-/path/to/claude-code-harness-template/setup.sh my-project-name
-```
-
-### 적용 후 해야 할 것
-
-1. `CLAUDE.md` — `{{PLACEHOLDER}}` 값 채우기 (빌드/테스트 명령 **필수**)
-2. `context/about-me.md` — 프로젝트 설명 채우기
-3. `templates/role-*.md` — `{{LINT_CMD}}`, `{{TEST_CMD}}` 등 프로젝트 명령으로 교체
-4. `.claude/rules/` — 프로젝트에 맞지 않는 규칙 수정/삭제
-5. `.claude/hooks/post-edit-check.sh` — 프로젝트 특화 검사 패턴 추가
-
-### 3-Role Workflow 사용
-
-```bash
-# 1. Planner — 읽기 전용, 계획 작성
-claude "templates/role-planner.md 역할로 Task 1 진행해."
-
-# 2. Developer — 구현 + 검증 (커밋 안 함)
-claude "templates/role-developer.md 역할로 Task 1 구현해."
-
-# 3. Reviewer — 검사 + APPROVE 시 커밋+푸시
-claude "templates/role-reviewer.md 역할로 Task 1 검사해."
-```
-
-**REQUEST_CHANGES가 나오면:**
-```bash
-# Developer 다시 → Reviewer 다시 (APPROVE될 때까지)
-claude "templates/role-developer.md 역할로 Task 1 수정사항 반영해."
-claude "templates/role-reviewer.md 역할로 Task 1 재검사해."
-```
+---
 
 ## 파일 간 연결 구조
 
 ```
-CLAUDE.md (진입점)
+CLAUDE.md (AI 진입점)
   ├── context/about-me.md ← 프로젝트 배경
   ├── context/working-rules.md ← 3-Role Protocol 정의
   ├── handoff/latest.md ← 세션 간 연결고리
@@ -174,6 +177,22 @@ CLAUDE.md (진입점)
   ├── .claude/hooks/ ← 자동 안전 검사
   └── .claude/settings.json ← 권한 + hook 연결
 ```
+
+---
+
+## v1 → v2 변경사항
+
+| 개선 | v1 | v2 |
+|------|----|----|
+| 워크플로우 | 단일 세션 | **3-Role (Planner → Developer → Reviewer)** |
+| 커밋 권한 | 명시 없음 | **Reviewer만 APPROVE 후 커밋+푸시** |
+| settings.json | Read/Write만 허용 | **git, lint, test Bash 자동 허가** |
+| 산출물 관리 | outputs/ 단일 폴더 | **outputs/plans/, reviews/, archive/ 분리** |
+| 브랜치 규칙 | "main 직접 푸시 금지" 고정 | **Solo/협업 구분** |
+| 파일 간 연결 | 일부만 참조 | **전체 구조 참조** |
+| 초기화 | 인간이 placeholder 직접 채움 | **초기화 세션에서 AI가 채움** |
+
+---
 
 ## 가이드북 매핑
 
