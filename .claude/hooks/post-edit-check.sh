@@ -1,20 +1,18 @@
 #!/bin/bash
-# Hook: 파일 수정 후 자동 점검
-# 가이드북 5.10 기반 - Verification 자동화
+# Hook: Automatic checks after file edits (PostToolUse)
 #
-# 체크 항목:
-# - .env 파일 수정 감지 (비밀값 보호)
-# - 하드코딩된 시크릿 패턴 감지
-# - TODO/FIXME 잔존 확인
+# Checks:
+# - .env file modification (secret protection)
+# - Hardcoded secret patterns (API keys, passwords, tokens)
 
 INPUT="$1"
 
-# .env 파일 수정 감지
+# Detect .env file modifications
 if echo "$INPUT" | grep -qE '\.env'; then
   echo "WARNING: .env file was modified. Verify no secrets were exposed."
 fi
 
-# 하드코딩된 시크릿 패턴 감지
+# Detect hardcoded secret patterns
 SECRET_PATTERNS=(
   "sk-[a-zA-Z0-9]{20,}"
   "AKIA[A-Z0-9]{16}"

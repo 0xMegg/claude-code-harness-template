@@ -2,10 +2,6 @@
 
 Claude Code & Cowork 마스터 가이드(583p) 기반 재사용 가능 작업 환경 템플릿.
 
-> **인간은 이 README.md만 읽으면 됩니다.** 나머지 문서는 Claude가 알아서 읽고 처리합니다.
-
----
-
 ## 새 프로젝트 시작하기
 
 ### 준비물
@@ -68,11 +64,11 @@ claude "templates/role-reviewer.md 역할로 Task 1 재검사해."
 ### 전체 흐름
 
 ```
-[인간] 기획안 작성 + setup.sh 실행
+기획안 작성 + setup.sh 실행
   ↓
-[초기화 세션] Claude가 기획안 읽고 하네스 설정 완성
+초기화 세션: 기획안 읽고 하네스 설정 완성
   ↓
-[Planner] → [Developer] → [Reviewer] 반복
+Planner → Developer → Reviewer 반복
   ↓
 (handoff/latest.md가 자동 업데이트되어 세션 간 상태 유지)
 ```
@@ -145,19 +141,19 @@ project/
 │   └── archive/                           # 해결된 과거 문서
 ├── docs/
 │   └── project-plan.md                    # 프로젝트 기획안 양식
-├── PlaceholderGuide.md                    # AI용: placeholder 채우기 가이드
+├── PlaceholderGuide.md                    # 초기화 세션용: placeholder 채우기 가이드
 ├── setup.sh                               # 새 프로젝트 초기화 스크립트
-└── README.md                              # 인간용: 이 문서
+└── README.md
 ```
 
 ### 문서 역할 구분
 
-| 문서 | 누가 읽는지 | 용도 |
-|------|-----------|------|
-| `README.md` | **인간** | 시작 가이드, 사용법 |
-| `PlaceholderGuide.md` | **AI (초기화 세션)** | placeholder 채우기 규칙 |
-| `docs/project-plan.md` | **인간 → AI** | 인간이 채우고, AI가 읽어서 하네스 설정 |
-| 나머지 전부 | **AI** | 세션마다 자동으로 읽고 따름 |
+| 문서 | 용도 |
+|------|------|
+| `README.md` | 시작 가이드, 사용법 |
+| `docs/project-plan.md` | 프로젝트 기획안 양식 |
+| `PlaceholderGuide.md` | 초기화 세션에서 placeholder 채우기 규칙 |
+| 나머지 전부 | 세션마다 자동으로 읽고 따르는 하네스 파일 |
 
 ---
 
@@ -190,7 +186,7 @@ CLAUDE.md (AI 진입점)
 | 산출물 관리 | outputs/ 단일 폴더 | **outputs/plans/, reviews/, archive/ 분리** |
 | 브랜치 규칙 | "main 직접 푸시 금지" 고정 | **Solo/협업 구분** |
 | 파일 간 연결 | 일부만 참조 | **전체 구조 참조** |
-| 초기화 | 인간이 placeholder 직접 채움 | **초기화 세션에서 AI가 채움** |
+| 초기화 | placeholder 직접 채움 | **초기화 세션에서 자동 채움** |
 
 ---
 

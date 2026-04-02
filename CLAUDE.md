@@ -53,12 +53,12 @@
 - `{{SCHEMA_FILE}}` — data schema (source of truth), if applicable
 - `context/about-me.md` — project background and goals
 - `context/working-rules.md` — work principles and protocols
-- `handoff/latest.md` — current state and task queue (매 세션 시작 시 필독)
+- `handoff/latest.md` — current state and task queue (read at every session start)
 
 ## 3-Role Workflow
-- `templates/role-planner.md` — Planner: 읽기 전용, 계획 작성 → `outputs/plans/`
-- `templates/role-developer.md` — Developer: 구현+검증, 커밋하지 않음
-- `templates/role-reviewer.md` — Reviewer: 검사 후 APPROVE 시 커밋+푸시
+- `templates/role-planner.md` — Planner: read-only, writes plans to `outputs/plans/`
+- `templates/role-developer.md` — Developer: implements + verifies, does NOT commit
+- `templates/role-reviewer.md` — Reviewer: reviews, commits + pushes on APPROVE
 
 ## Templates & Skills
 - `templates/plan.md` — work plan format
@@ -67,13 +67,13 @@
 - `skills/bug-fix/` — 7-step bug fix workflow
 - `skills/code-review/` — code review checklist
 
-## Rules (자동 적용)
-- `.claude/rules/api.md` — API/DB 규칙
-- `.claude/rules/frontend.md` — UI 규칙
-- `.claude/rules/testing.md` — 테스트 규칙
-- `.claude/rules/git.md` — 커밋, 브랜치 규칙
+## Rules (auto-applied)
+- `.claude/rules/api.md` — API/DB rules
+- `.claude/rules/frontend.md` — UI rules
+- `.claude/rules/testing.md` — testing rules
+- `.claude/rules/git.md` — commit and branch rules
 
 ## Outputs
-- `outputs/plans/` — Planner 산출물
-- `outputs/reviews/` — Reviewer 산출물
-- `outputs/archive/` — 해결된 과거 문서
+- `outputs/plans/` — Planner artifacts
+- `outputs/reviews/` — Reviewer artifacts
+- `outputs/archive/` — resolved past documents

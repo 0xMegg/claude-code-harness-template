@@ -13,9 +13,9 @@
 - Hosting: {{HOSTING}}
 
 ## Key Directories
-- `{{SRC_DIR}}` — 소스 코드
-- `{{TEST_DIR}}` — 테스트
-- `{{CONFIG_DIR}}` — 설정 파일
+- `{{SRC_DIR}}` — source code
+- `{{TEST_DIR}}` — tests
+- `{{CONFIG_DIR}}` — configuration files
 
 ## Current State
 - [ ] MVP / Prototype

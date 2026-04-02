@@ -1,71 +1,71 @@
 ---
 name: code-review
-description: 코드 리뷰 — 정확성, 보안, 아키텍처 검증
+description: Review code changes for correctness, security, and architecture
 version: 2.0.0
 ---
 
 # Code Review Skill
 
 ## Goal
-코드 변경사항을 검토하고 심각도별로 정리된 피드백을 제공한다.
+Review code changes and provide actionable feedback organized by severity.
 
 ## Input Required
-- 리뷰할 diff 또는 파일
-- 변경 목적 (어떤 문제를 해결하는지)
+- The diff or files to review
+- Context about what the change is supposed to do
 
 ## Steps
 
-### 1. 의도 파악
-- Task 설명 또는 plan 읽기
-- 변경이 해결하는 문제 이해
+### 1. Understand Intent
+- Read the Task description or plan
+- Understand what problem the change solves
 
-### 2. Diff 읽기
-- 변경된 파일 전부 읽기
-- 변경 범위 파악
+### 2. Read the Diff
+- Read all changed files in full
+- Note the scope of changes
 
-### 3. 이슈 체크 (우선순위순)
+### 3. Check for Issues (in priority order)
 
-#### Critical (반드시 수정)
-- 보안: 시크릿 하드코딩, 인증 우회
-- 데이터 손실 위험
-- 외부 호출에 에러 처리 누락
-- 깨진 기능 (라우팅, API 등)
+#### Critical (must fix)
+- Security: hardcoded secrets, auth bypass
+- Data loss risk
+- Missing error handling on external calls
+- Broken functionality (wrong routes, broken API)
 
-#### Important (수정 권장)
-- 아키텍처 규칙 위반 (rules/ 참고)
-- 누락된 테스트
-- 하드코딩된 값 (설정, URL, 색상 등)
+#### Important (should fix)
+- Architecture rule violations (see .claude/rules/)
+- Missing tests for new behavior
+- Hardcoded values (config, URLs, colors)
 
-#### Minor (선택)
-- 네이밍 개선
-- 코드 구조화
-- 문서 부족
+#### Minor (nice to fix)
+- Naming improvements
+- Code organization
+- Documentation gaps
 
-### 4. 리포트 형식
+### 4. Report Format
 ```
 ## Review Report
 
 **Overall:** APPROVE / REQUEST_CHANGES / NEEDS_DISCUSSION
 
 ### Critical
-- [파일:줄] 설명 + 수정 제안
+- [file:line] description + suggested fix
 
 ### Important
-- [파일:줄] 설명 + 수정 제안
+- [file:line] description + suggested fix
 
 ### Minor
-- [파일:줄] 설명
+- [file:line] description
 
 ### Good
-- 잘한 점 (강화할 패턴)
+- What was done well (reinforce good patterns)
 ```
 
-### 5. 검증
-- lint/analyze 직접 실행해서 결과 확인
-- test 직접 실행해서 결과 확인
-- 리포트에 기재된 내용과 실제 결과 대조
+### 5. Verify
+- Run lint/analyze and check the results
+- Run tests and check the results
+- Compare report findings against actual tool output
 
-## 판정 기준
-- Critical 1개 이상 → REQUEST_CHANGES
-- Important만 → Developer에게 판단 위임
-- Minor만 → APPROVE
+## Verdict Criteria
+- Any Critical → REQUEST_CHANGES
+- Only Important → defer to Developer's judgment
+- Only Minor → APPROVE

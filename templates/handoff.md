@@ -1,26 +1,26 @@
 # Session Handoff
 
 ## Date
-[날짜]
+[date]
 
 ## What Was Done
-- [변경 1]
-- [변경 2]
+- [Change 1]
+- [Change 2]
 
 ## Files Changed
-- `[파일 경로]` — [변경 이유]
+- `[file path]` — [reason for change]
 
 ## Verification
-- Lint/Analyze: PASS / FAIL (details: [상세])
-- Test: PASS / FAIL / 해당 테스트 없음
+- Lint/Analyze: PASS / FAIL (details: [details])
+- Test: PASS / FAIL / no related tests
 - Build: PASS / FAIL
 
 ## What's Next
-1. [다음 작업 1]
-2. [다음 작업 2]
+1. [Next task 1]
+2. [Next task 2]
 
 ## Open Issues / Risks
-- [미해결 사항]
+- [Unresolved items]
 
 ## Decisions Made
-- [결정 사항]: [선택한 옵션] because [이유]
+- [Decision]: chose [option] because [reason]

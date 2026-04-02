@@ -1,58 +1,58 @@
 ---
 name: bug-fix
-description: 버그 수정 워크플로 — 재현, 진단, 수정, 검증
+description: Structured bug fix workflow — reproduce, diagnose, fix, verify
 version: 2.0.0
 ---
 
 # Bug Fix Skill
 
 ## Goal
-버그를 최소 변경 범위로 수정하고 완전히 검증한다.
+Fix the bug with minimal blast radius and full verification.
 
 ## Input Required
-- 버그 설명 (무엇이 깨졌는지)
-- 재현 단계 (또는 찾을 수 있는 정보)
+- Bug description (what is broken)
+- Reproduction steps (or enough info to find them)
 
 ## Steps
 
-### 1. 이해
-- 버그 리포트 읽기
-- 영향 받는 영역 파악
-- 관련 코드 읽기
+### 1. Understand
+- Read the bug report
+- Identify the affected area (files, modules, endpoints)
+- Read the relevant code
 
-### 2. 재현
-- 재현 단계 따라가기
-- 정확한 에러 메시지 또는 잘못된 동작 기록
+### 2. Reproduce
+- Follow reproduction steps
+- Record the exact error message or incorrect behavior
 
-### 3. 진단
-- 원인 가설 세우기
-- 트리거에서 증상까지 코드 경로 추적
-- git blame으로 최근 변경 확인
-- 가설이 틀리면 새로 세우기 (최대 3회, 이후 사람에게 확인)
+### 3. Diagnose
+- Form a root cause hypothesis
+- Trace the code path from trigger to symptom
+- Check git blame for recent changes
+- If hypothesis is wrong, form a new one (max 3 attempts, then escalate to human)
 
-### 4. 계획
-- `templates/bug-fix.md` 형식으로 수정 계획 작성
-- Scope: 수정할 파일 / 건드리지 않을 파일 명시
-- 구현 전에 계획을 먼저 보여주기
+### 4. Plan
+- Write a fix plan using `templates/bug-fix.md`
+- Define scope: files to change vs. files to avoid
+- Present the plan before implementing
 
-### 5. 구현
-- 버그를 고치는 가장 작은 변경만
-- 주변 코드 리팩터링 하지 않기
-- 다른 버그 발견해도 지금 고치지 않기 (handoff에 기록)
+### 5. Implement
+- Make the smallest change that fixes the bug
+- Do not refactor surrounding code
+- If you find other bugs, note them in handoff (don't fix now)
 
-### 6. 검증
-- [ ] lint/analyze 경고 없음
-- [ ] 관련 테스트 통과
-- [ ] 회귀 테스트 추가
-- [ ] 프로젝트 아키텍처 규칙 준수 (rules/ 참고)
-- [ ] 수동 재현 시 더 이상 발생 안 함
+### 6. Verify
+- [ ] Lint/analyze passes with no warnings
+- [ ] Related tests pass
+- [ ] Regression test added
+- [ ] Project architecture rules followed (see .claude/rules/)
+- [ ] Manual reproduction no longer triggers the bug
 
-### 7. 인수인계
-- handoff/latest.md 업데이트
-- 변경 내용, 이유, 남은 위험 기록
+### 7. Handoff
+- Update handoff/latest.md
+- Record what changed, why, and any remaining risk
 
 ## Common Pitfalls
-- 증상만 고치고 원인을 안 고침
-- 한번에 너무 많은 파일 변경
-- 회귀 테스트 빼먹음
-- scope 밖 리팩터링 같이 하기
+- Fixing the symptom instead of the root cause
+- Changing too many files at once
+- Forgetting to add a regression test
+- Mixing scope — doing refactoring alongside the fix

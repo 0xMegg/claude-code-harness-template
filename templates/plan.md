@@ -1,33 +1,33 @@
 # Work Plan
 
 ## Task
-[Task 번호] — [Task 이름]
+[Task number] — [Task name]
 
 ## Goal
-[완료 상태가 어떤 모습인지 1~2문장]
+[1-2 sentences describing what "done" looks like]
 
 ## Context
-- Related files: [수정/참조할 파일 경로]
-- Related issues: [관련 Task 번호 또는 이슈]
-- Dependencies: [선행 작업이 있다면]
+- Related files: [file paths to modify/reference]
+- Related issues: [related Task numbers or issues]
+- Dependencies: [prerequisite tasks, if any]
 
 ## Approach
-1. [단계 1]
-2. [단계 2]
-3. [단계 3]
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
 
 ## Scope
-- 수정할 파일: [목록]
-- 건드리지 않을 파일: [목록]
+- Files to modify: [list]
+- Files NOT to touch: [list]
 
 ## Acceptance Criteria
-- [ ] [기준 1]
-- [ ] [기준 2]
-- [ ] lint/analyze 통과
-- [ ] test 통과 (관련 테스트 있는 경우)
+- [ ] [Criterion 1]
+- [ ] [Criterion 2]
+- [ ] Lint/analyze passes
+- [ ] Tests pass (if related tests exist)
 
 ## Risks & Open Questions
-- [위험 요소나 미확정 사항]
+- [Risks or undecided items]
 
 ## Rollback Plan
-안 되면: [되돌리는 방법. 예: git revert, 파일 삭제 등]
+If it doesn't work: [how to revert — e.g., git revert, delete files]

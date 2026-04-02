@@ -1,30 +1,35 @@
-# Frontend Development Rules
+# Frontend Rules
 
 ## Components:
-- One component per file
-- Keep components under 200 lines; extract if larger
-- Props interface must be explicitly typed (no `any`)
-- Use composition over prop drilling
+- One component/widget per file
+- Keep components under 200 lines; extract sub-components if larger
+- Prefer stateless/functional components; use stateful only when necessary
+- Props/parameters must be explicitly typed (no `any`, no `dynamic`)
 
 ## Styling:
-- Follow the project's existing styling approach (CSS modules, Tailwind, styled-components)
+- Follow the project's existing styling approach
 - Don't mix styling approaches within the same component
 - Use design tokens/variables for colors, spacing, typography
-- Responsive design: mobile-first approach
+- No hardcoded color values — use theme tokens
+- Responsive/adaptive design where applicable
 
-## State management:
-- Local state for UI-only concerns (useState)
-- Shared state for cross-component data (context, store)
-- Server state via data fetching library (React Query, SWR, etc.)
+## State Management:
+- Local state for UI-only concerns
+- Shared state for cross-component data
+- Server/async state via the project's data fetching pattern
 - Never duplicate server data in client state
+
+## Navigation/Routing:
+- Use only the project's designated routing solution
+- Route additions/changes only when the task explicitly requires it
+- No mixing of routing approaches (e.g., no Navigator.push if using GoRouter)
 
 ## Performance:
 - Lazy load routes and heavy components
-- Memoize expensive computations (useMemo) only when measured
-- Don't premature optimize — measure first with DevTools
+- Memoize expensive computations only when measured
+- Don't premature optimize — measure first
 
 ## Accessibility:
-- Semantic HTML elements over divs (button, nav, main, etc.)
-- All images need alt text
+- Semantic elements over generic containers
 - Interactive elements must be keyboard accessible
-- Color contrast must meet WCAG AA
+- Sufficient color contrast

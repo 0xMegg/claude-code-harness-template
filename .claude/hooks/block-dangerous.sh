@@ -1,13 +1,8 @@
 #!/bin/bash
-# Hook: 위험한 명령 사전 차단
-# 가이드북 5.10, 6.8 기반 - Permission Gate 역할
+# Hook: Block dangerous commands before execution (PreToolUse)
 #
-# 차단 대상:
-# - rm -rf (재귀 삭제)
-# - git push --force / -f (강제 푸시)
-# - git reset --hard (하드 리셋)
-# - chmod 777 (과도한 권한)
-# - 파이프를 통한 원격 스크립트 실행
+# Blocks: rm -rf, git push --force, git reset --hard,
+#         chmod 777, remote script piping, DROP TABLE, etc.
 
 INPUT="$1"
 

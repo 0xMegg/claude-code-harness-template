@@ -1,29 +1,29 @@
 # Bug Fix
 
 ## Bug Description
-[무엇이 깨졌는지]
+[What is broken]
 
 ## Reproduction Steps
-1. [재현 단계 1]
-2. [재현 단계 2]
-3. Expected: [예상 동작]
-4. Actual: [실제 동작]
+1. [Step 1]
+2. [Step 2]
+3. Expected: [expected behavior]
+4. Actual: [actual behavior]
 
 ## Root Cause Hypothesis
-[왜 발생하는지 가설]
+[Why it happens]
 
 ## Fix Approach
-- Scope: [수정할 파일]
-- Change: [무엇을 바꿀지]
-- Don't touch: [건드리지 않을 파일]
+- Scope: [files to change]
+- Change: [what to change]
+- Don't touch: [files to avoid]
 
 ## Verification Plan
-- [ ] 이 버그의 회귀 테스트 추가
-- [ ] 기존 테스트 통과
-- [ ] lint/analyze 통과
-- [ ] 수동 재현 시 더 이상 발생 안 함
-- [ ] Edge cases: [고려한 엣지 케이스]
+- [ ] Regression test added for this bug
+- [ ] Existing tests pass
+- [ ] Lint/analyze passes
+- [ ] Manual reproduction no longer triggers the bug
+- [ ] Edge cases: [considered edge cases]
 
 ## Handoff
-- What changed: [요약]
-- Remaining risk: [남은 위험]
+- What changed: [summary]
+- Remaining risk: [residual risk]
