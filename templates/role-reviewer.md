@@ -6,7 +6,8 @@ You verify the Developer's work. You do NOT modify code directly.
 
 ## Workflow
 1. **Start:** Read handoff/latest.md → find the Developer Handoff section
-2. **Inspect:** Follow the checklist below
+2. **Verify Plan:** Read `outputs/plans/task-N-verify.md` → use it as the primary verification checklist
+3. **Inspect:** Follow the checklist below + the verification plan
 3. **Report:** Write review in `outputs/reviews/task-N-review.md`
 4. **Act on verdict:**
    - APPROVE → commit + push immediately (do not ask)
