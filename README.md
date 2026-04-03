@@ -1,4 +1,4 @@
-# Claude Code Harness Template v2
+# Claude Code Harness Template v3
 
 Claude Code & Cowork 마스터 가이드(583p) 기반 재사용 가능 작업 환경 템플릿.
 
@@ -44,28 +44,28 @@ claude "docs/에 있는 기획안을 읽고, PlaceholderGuide.md를 참고해서
 
 ### Step 4: 개발 시작
 
-**작은 작업 (리팩터링, 버그 수정)** — Task 단위로 바로 진행:
-```bash
-claude "templates/role-planner.md 역할로 Task 1 진행해."
-claude "templates/role-developer.md 역할로 Task 1 구현해."
-claude "templates/role-reviewer.md 역할로 Task 1 검사해."
+**작은 작업 (리팩터링, 버그 수정)** — `/plan`, `/develop`, `/review` 슬래시 커맨드 사용:
+```
+/plan Task 1 — 회원가입 폼 빈값 제출 버그 수정
+/develop Task 1 — 회원가입 폼 빈값 제출 버그 수정
+/review Task 1 — 회원가입 폼 빈값 제출 버그 수정
 ```
 
 **큰 기능 (새 화면, 새 기능)** — Epic 분해 먼저:
-```bash
+```
 # 1. Epic 분해
-claude "templates/role-planner.md 역할로, 다음 기능을 Epic으로 분해해줘: [기능 설명]"
+/plan Epic 1 — 다이브 로그 입력 화면 전체 구현
 
 # 2. Slice 단위로 3-Role 반복
-claude "templates/role-planner.md 역할로 Epic 1의 Slice 1 진행해."
-claude "templates/role-developer.md 역할로 Epic 1의 Slice 1 구현해."
-claude "templates/role-reviewer.md 역할로 Epic 1의 Slice 1 검사해."
+/plan Task 1 — Epic 1 Slice 1: 데이터 모델 및 Repository
+/develop Task 1 — Epic 1 Slice 1: 데이터 모델 및 Repository
+/review Task 1 — Epic 1 Slice 1: 데이터 모델 및 Repository
 ```
 
 **REQUEST_CHANGES가 나오면:**
-```bash
-claude "templates/role-developer.md 역할로 수정사항 반영해."
-claude "templates/role-reviewer.md 역할로 재검사해."
+```
+/develop Task 1 — REQUEST_CHANGES 수정사항 반영
+/review Task 1 — 재검사
 ```
 
 ### 전체 흐름
@@ -103,15 +103,15 @@ handoff/latest.md에 Task Queue로 정리해줘."
 
 ## 세션 종류 요약
 
-| 세션 | 언제 쓰는지 | 프롬프트 |
-|------|-----------|---------|
+| 세션 | 언제 쓰는지 | 커맨드 |
+|------|-----------|--------|
 | **초기화** | 프로젝트 시작할 때 1번 | `"기획안 읽고 placeholder 채워줘"` |
-| **Epic 분해** | 큰 기능 시작할 때 | `"role-planner.md 역할로, 이 기능을 Epic으로 분해해줘"` |
-| **Planner** | Task/Slice마다 첫 번째 | `"role-planner.md 역할로 Task N 진행해"` |
-| **Developer** | Task마다 두 번째 | `"role-developer.md 역할로 Task N 구현해"` |
-| **Reviewer** | Task마다 세 번째 | `"role-reviewer.md 역할로 Task N 검사해"` |
+| **Epic 분해** | 큰 기능 시작할 때 | `/plan Epic N — [기능 설명]` |
+| **Planner** | Task/Slice마다 첫 번째 | `/plan Task N — [설명]` |
+| **Developer** | Task마다 두 번째 | `/develop Task N — [설명]` |
+| **Reviewer** | Task마다 세 번째 | `/review Task N — [설명]` |
 | **일반** | 간단한 질문/수정 | 역할 지정 없이 자유롭게 |
-| **블로그** | 하루 작업 끝나고 | `/blog` 또는 `/blog 회고 중심으로` |
+| **블로그** | 기술 블로그 초안 | `/blog` 또는 `/blog [주제]` |
 
 ---
 
@@ -124,9 +124,13 @@ project/
 │   ├── settings.json                      # 권한/안전 설정
 │   ├── hooks/
 │   │   ├── block-dangerous.sh             # PreToolUse: 위험 명령 차단
-│   │   └── post-edit-check.sh             # PostToolUse: 시크릿 감지
+│   │   ├── post-edit-check.sh             # PostToolUse: 시크릿 감지
+│   │   └── post-edit-lint.sh              # PostToolUse: 자동 lint (프로젝트 자동 감지)
 │   ├── commands/
-│   │   └── blog.md                        # /blog 커맨드: 작업 블로그 요약
+│   │   ├── plan.md                        # /plan: Planner 역할 진입
+│   │   ├── develop.md                     # /develop: Developer 역할 진입
+│   │   ├── review.md                      # /review: Reviewer 역할 진입
+│   │   └── blog.md                        # /blog: 기술 블로그 초안
 │   └── rules/
 │       ├── api.md                         # API/DB 규칙
 │       ├── frontend.md                    # UI 규칙
@@ -142,11 +146,16 @@ project/
 │   ├── role-reviewer.md                   # Reviewer 역할
 │   ├── epic-plan.md                       # Epic → Slice 분해 형식
 │   ├── plan.md                            # 작업 계획 형식 (per slice/task)
+│   ├── verify.md                          # 검증 계획 형식
 │   ├── handoff.md                         # 세션 인수인계 형식
 │   └── bug-fix.md                         # 버그 수정 형식
 ├── skills/
-│   ├── bug-fix/SKILL.md                   # 버그 수정 워크플로
-│   └── code-review/SKILL.md              # 코드 리뷰 워크플로
+│   ├── bug-fix/
+│   │   ├── SKILL.md                       # 버그 수정 워크플로
+│   │   └── examples/good-output.md        # 좋은 버그 수정 예시 (프로젝트별 교체)
+│   └── code-review/
+│       ├── SKILL.md                       # 코드 리뷰 워크플로
+│       └── examples/good-output.md        # 좋은 리뷰 예시 (프로젝트별 교체)
 ├── handoff/
 │   └── latest.md                          # 현재 상태 (세션 간 연결고리)
 ├── outputs/
@@ -180,15 +189,28 @@ CLAUDE.md (AI 진입점)
   ├── handoff/latest.md ← 세션 간 연결고리
   │     ↑ Planner 쓰기 → Developer 읽기 → Reviewer 쓰기
   ├── templates/role-*.md ← 각 역할의 행동 규칙
-  │     ├── role-planner.md → outputs/plans/
+  │     ├── role-planner.md → outputs/plans/ (plan + verify)
   │     ├── role-developer.md → handoff/latest.md (커밋 안 함)
   │     └── role-reviewer.md → outputs/reviews/ + git commit+push
+  ├── .claude/commands/ ← 슬래시 커맨드 (/plan, /develop, /review, /blog)
   ├── .claude/rules/ ← 자동 적용 규칙
   ├── .claude/hooks/ ← 자동 안전 검사
   └── .claude/settings.json ← 권한 + hook 연결
 ```
 
 ---
+
+## v2 → v3 변경사항
+
+| 개선 | v2 | v3 |
+|------|----|----|
+| 역할 진입 | 매번 긴 프롬프트 입력 | **`/plan`, `/develop`, `/review` 슬래시 커맨드** |
+| 검증 계획 | plan.md 내 Acceptance Criteria | **독립 `templates/verify.md` + Planner가 작성** |
+| 편집 후 lint | 수동 실행 | **PostToolUse hook 자동 실행 (프로젝트 자동 감지)** |
+| 세션 관리 | 언급 없음 | **working-rules.md에 continue/resume/fork/worktree 지침** |
+| /compact 지침 | 없음 | **Compact Rules로 보존 항목 사전 정의** |
+| Gotchas | 없음 | **CLAUDE.md에 프로젝트 고유 함정 섹션** |
+| Skill 구조 | SKILL.md만 | **examples/ 폴더 추가 (좋은 결과 감각 제공)** |
 
 ## v1 → v2 변경사항
 
@@ -210,7 +232,9 @@ CLAUDE.md (AI 진입점)
 |------|-------------|
 | `CLAUDE.md` | 3.7 (7일 세팅), 5.3 (운영 원칙) |
 | `settings.json` | 3.14 (보안), 5.10 (하네스 요소) |
-| `hooks/` | 2장 (Hook 개념), 5.10 (자동 개입) |
+| `hooks/` | 2장 (Hook 개념), 5.10 (자동 개입), 5.6 (도구 출력 예산) |
+| `commands/` | 6.1 (Skill 트리거), 가이드북 운영 원칙 (반복 비용 절감) |
+| `verify.md` | 5.11 (검증 계층), 5.10 ("무엇으로 확인할지 먼저 정한다") |
 | `rules/` | 5.4 (Rules 분리), 5.5 (컨텍스트 엔지니어링) |
 | `context/` | 3.17 (스타터 번들), 5.2 (작업공간 설계) |
 | `templates/` | 3.9 (템플릿 역할), 4.3 (실전 프롬프트) |

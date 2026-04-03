@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claude Code Harness v2 Setup Script
+# Claude Code Harness v3 Setup Script
 #
 # Usage:
 #   cd /path/to/your-project
@@ -11,7 +11,7 @@ PROJECT_NAME="${1:-my-project}"
 TEMPLATE_DIR="$(cd "$(dirname "$0")" && pwd)"
 TARGET_DIR="$(pwd)"
 
-echo "=== Claude Code Harness v2 Setup ==="
+echo "=== Claude Code Harness v3 Setup ==="
 echo "Project: $PROJECT_NAME"
 echo "Target:  $TARGET_DIR"
 echo ""
@@ -36,8 +36,8 @@ mkdir -p "$TARGET_DIR/outputs/plans"
 mkdir -p "$TARGET_DIR/outputs/reviews"
 mkdir -p "$TARGET_DIR/outputs/archive"
 mkdir -p "$TARGET_DIR/handoff"
-mkdir -p "$TARGET_DIR/skills/bug-fix"
-mkdir -p "$TARGET_DIR/skills/code-review"
+mkdir -p "$TARGET_DIR/skills/bug-fix/examples"
+mkdir -p "$TARGET_DIR/skills/code-review/examples"
 mkdir -p "$TARGET_DIR/docs"
 
 # Copy core files
@@ -65,7 +65,9 @@ cp "$TEMPLATE_DIR/context/"*.md "$TARGET_DIR/context/"
 # decision-log.md is included via context/*.md copy above
 cp "$TEMPLATE_DIR/templates/"*.md "$TARGET_DIR/templates/"
 cp "$TEMPLATE_DIR/skills/bug-fix/SKILL.md" "$TARGET_DIR/skills/bug-fix/SKILL.md"
+cp "$TEMPLATE_DIR/skills/bug-fix/examples/good-output.md" "$TARGET_DIR/skills/bug-fix/examples/good-output.md"
 cp "$TEMPLATE_DIR/skills/code-review/SKILL.md" "$TARGET_DIR/skills/code-review/SKILL.md"
+cp "$TEMPLATE_DIR/skills/code-review/examples/good-output.md" "$TARGET_DIR/skills/code-review/examples/good-output.md"
 
 # Copy PlaceholderGuide (AI reads this during init session)
 if [ -f "$TEMPLATE_DIR/PlaceholderGuide.md" ]; then
@@ -111,7 +113,7 @@ Project initialized with Claude Code harness v2 template.
 3. Start Task 1 with Planner role
 
 ## Notes
-- Harness template version: 2.0.0
+- Harness template version: 3.0.0
 - Workflow: Planner → Developer → Reviewer
 EOF
 
@@ -138,7 +140,7 @@ EOF
 fi
 
 echo ""
-echo "=== Setup Complete (v2.0.0) ==="
+echo "=== Setup Complete (v3.0.0) ==="
 echo ""
 echo "Next steps:"
 echo "  1. Write your project plan in docs/project-plan.md"
@@ -150,10 +152,10 @@ echo "     Target files: CLAUDE.md, context/about-me.md, templates/role-*.md"
 echo "     Also customize .claude/rules/ and .claude/hooks/post-edit-check.sh"
 echo "     for this project.\""
 echo ""
-echo "  3. Start development:"
-echo "     claude \"Follow templates/role-planner.md role for Task 1.\""
-echo "     claude \"Follow templates/role-developer.md role for Task 1.\""
-echo "     claude \"Follow templates/role-reviewer.md role for Task 1.\""
+echo "  3. Start development (use slash commands):"
+echo "     /plan Task 1 — [task description]"
+echo "     /develop Task 1 — [task description]"
+echo "     /review Task 1 — [task description]"
 echo ""
 echo "Files created:"
 find "$TARGET_DIR" -not -path "*/node_modules/*" -not -path "*/.git/*" \

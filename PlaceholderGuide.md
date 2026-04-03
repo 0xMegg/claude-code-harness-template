@@ -1,4 +1,4 @@
-# Placeholder Guide (v2)
+# Placeholder Guide (v3)
 
 This document lists every `{{PLACEHOLDER}}` in the harness template and how to fill them.
 Read the project plan in `docs/` first, then replace each placeholder with project-specific values.
@@ -59,6 +59,18 @@ These commands are used for automatic verification after every code change.
 | `{{IMPORT_STYLE}}` | Import style | `absolute (@/components)`, `relative`, `package imports first` |
 | `{{ERROR_HANDLING}}` | Error handling approach | `try/catch with typed errors`, `Result type`, `error wrapping` |
 
+### Gotchas
+
+Project-specific pitfalls that Claude should always keep in mind. Fill these in as you discover them during development — they don't need to be filled during init.
+
+| Placeholder | Description | Examples |
+|-------------|-------------|----------|
+| `{{GOTCHA_1}}` | Pitfall 1 | `build_runner must run before test`, `RLS hides rows silently` |
+| `{{GOTCHA_2}}` | Pitfall 2 | `iOS simulator needs manual cert refresh after 7 days` |
+| `{{GOTCHA_3}}` | Pitfall 3 | `Legacy code in lib/screens/ uses different patterns` |
+
+> Add or remove lines as needed. These accumulate over time — each bug fix or unexpected behavior is a candidate.
+
 ### Other
 
 | Placeholder | Description | Examples |
@@ -117,7 +129,14 @@ These commands are used for automatic verification after every code change.
 
 ---
 
-## 4. .claude/commands/blog.md — Blog Command
+## 4. templates/verify.md — Verification Plan
+
+Uses the same `{{LINT_CMD}}`, `{{TEST_CMD}}`, `{{TEST_SINGLE_CMD}}`, `{{BUILD_CMD}}` as CLAUDE.md.
+No additional placeholders — the Planner fills in task-specific checks when writing each verification plan.
+
+---
+
+## 5. .claude/commands/blog.md — Blog Command
 
 | Placeholder | Description | Examples |
 |-------------|-------------|----------|
@@ -139,5 +158,6 @@ These commands are used for automatic verification after every code change.
 - `{{TEST_SINGLE_CMD}}`, `{{FORMAT_CMD}}`
 - `{{ARCHITECTURE_CHECK_*}}`, `{{SECURITY_CHECK}}` (can fill during first review)
 - `{{BLOG_LANGUAGE}}` (defaults to Korean if unfilled)
+- `{{GOTCHA_*}}` (accumulate during development — each bug fix adds candidates)
 
 > **Key principle:** Build/test commands must be accurate for Claude to auto-verify after code changes. If those are correct, the rest can be filled incrementally.

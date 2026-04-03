@@ -45,6 +45,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/post-edit-check.sh \"$TOOL_INPUT\""
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/post-edit-lint.sh"
           }
         ]
       }

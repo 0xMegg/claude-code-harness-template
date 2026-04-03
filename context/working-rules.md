@@ -19,6 +19,23 @@ If no role is specified (general session):
 3. Verify: confirm tests pass
 4. Handoff: update `handoff/latest.md`
 
+## Session Management
+- **Continue (`--continue`):** same task, same context — pick up where you left off
+- **Resume (`--resume`):** browse past sessions and select one to continue
+- **Fork (`--fork-session`):** branch off into a different direction from the current session
+- **Worktree (`--worktree`):** parallel implementation on separate files — never edit the same file in two sessions
+- When the session gets long, run `/compact` before critical context is lost
+- After a direction change, prefer `--fork-session` over continuing in a polluted context
+
+## Compact Rules
+When running `/compact`, always preserve:
+- Last modified files and why
+- Test results (pass/fail/not run)
+- Discarded alternatives and reasons
+- The single next action for the next turn
+- Risk points needing human review
+- Current Task number and plan location
+
 ## Communication
 - If uncertain about scope, ask before implementing
 - If 3+ different approaches fail, stop and discuss

@@ -69,9 +69,15 @@
 - `templates/epic-plan.md` — epic decomposition into slices
 - `templates/plan.md` — work plan format (per slice/task)
 - `templates/handoff.md` — session handoff format
+- `templates/verify.md` — verification plan format
 - `templates/bug-fix.md` — bug fix workflow format
 - `skills/bug-fix/` — 7-step bug fix workflow
 - `skills/code-review/` — code review checklist
+
+## Gotchas
+- {{GOTCHA_1}}
+- {{GOTCHA_2}}
+- {{GOTCHA_3}}
 
 ## Rules (auto-applied)
 - `.claude/rules/api.md` — API/DB rules
