@@ -111,6 +111,7 @@ handoff/latest.md에 Task Queue로 정리해줘."
 | **Developer** | Task마다 두 번째 | `"role-developer.md 역할로 Task N 구현해"` |
 | **Reviewer** | Task마다 세 번째 | `"role-reviewer.md 역할로 Task N 검사해"` |
 | **일반** | 간단한 질문/수정 | 역할 지정 없이 자유롭게 |
+| **블로그** | 하루 작업 끝나고 | `/blog` 또는 `/blog 회고 중심으로` |
 
 ---
 
@@ -124,6 +125,8 @@ project/
 │   ├── hooks/
 │   │   ├── block-dangerous.sh             # PreToolUse: 위험 명령 차단
 │   │   └── post-edit-check.sh             # PostToolUse: 시크릿 감지
+│   ├── commands/
+│   │   └── blog.md                        # /blog 커맨드: 작업 블로그 요약
 │   └── rules/
 │       ├── api.md                         # API/DB 규칙
 │       ├── frontend.md                    # UI 규칙

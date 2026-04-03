@@ -117,6 +117,14 @@ These commands are used for automatic verification after every code change.
 
 ---
 
+## 4. .claude/commands/blog.md — Blog Command
+
+| Placeholder | Description | Examples |
+|-------------|-------------|----------|
+| `{{BLOG_LANGUAGE}}` | Blog post language | `Korean`, `English`, `Japanese` |
+
+---
+
 ## Priority
 
 ### Must fill now
@@ -130,5 +138,6 @@ These commands are used for automatic verification after every code change.
 - `{{ANY_CONSTRAINTS_OR_HISTORY}}`
 - `{{TEST_SINGLE_CMD}}`, `{{FORMAT_CMD}}`
 - `{{ARCHITECTURE_CHECK_*}}`, `{{SECURITY_CHECK}}` (can fill during first review)
+- `{{BLOG_LANGUAGE}}` (defaults to Korean if unfilled)
 
 > **Key principle:** Build/test commands must be accurate for Claude to auto-verify after code changes. If those are correct, the rest can be filled incrementally.

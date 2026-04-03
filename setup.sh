@@ -27,7 +27,7 @@ if [ -f "$TARGET_DIR/CLAUDE.md" ]; then
 fi
 
 # Create directory structure
-echo "[1/6] Creating directory structure..."
+echo "[1/7] Creating directory structure..."
 mkdir -p "$TARGET_DIR/.claude/hooks"
 mkdir -p "$TARGET_DIR/.claude/rules"
 mkdir -p "$TARGET_DIR/context"
@@ -41,21 +41,26 @@ mkdir -p "$TARGET_DIR/skills/code-review"
 mkdir -p "$TARGET_DIR/docs"
 
 # Copy core files
-echo "[2/6] Copying core files..."
+echo "[2/7] Copying core files..."
 cp "$TEMPLATE_DIR/CLAUDE.md" "$TARGET_DIR/CLAUDE.md"
 cp "$TEMPLATE_DIR/.claude/settings.json" "$TARGET_DIR/.claude/settings.json"
 
 # Copy hook scripts and set permissions
-echo "[3/6] Setting up hooks..."
+echo "[3/7] Setting up hooks..."
 cp "$TEMPLATE_DIR/.claude/hooks/"*.sh "$TARGET_DIR/.claude/hooks/"
 chmod +x "$TARGET_DIR/.claude/hooks/"*.sh
 
 # Copy rules
-echo "[4/6] Copying rules..."
+echo "[4/7] Copying rules..."
 cp "$TEMPLATE_DIR/.claude/rules/"*.md "$TARGET_DIR/.claude/rules/"
 
+# Copy custom commands
+echo "[5/7] Copying custom commands..."
+mkdir -p "$TARGET_DIR/.claude/commands"
+cp "$TEMPLATE_DIR/.claude/commands/"*.md "$TARGET_DIR/.claude/commands/"
+
 # Copy context, templates, skills, docs
-echo "[5/6] Copying context, templates, skills, and docs..."
+echo "[6/7] Copying context, templates, skills, and docs..."
 cp "$TEMPLATE_DIR/context/"*.md "$TARGET_DIR/context/"
 # decision-log.md is included via context/*.md copy above
 cp "$TEMPLATE_DIR/templates/"*.md "$TARGET_DIR/templates/"
@@ -73,7 +78,7 @@ if [ -f "$TEMPLATE_DIR/docs/project-plan.md" ]; then
 fi
 
 # Replace project name in key files
-echo "[6/6] Replacing project name..."
+echo "[7/7] Replacing project name..."
 FILES_TO_REPLACE=(
   "$TARGET_DIR/CLAUDE.md"
   "$TARGET_DIR/context/about-me.md"
