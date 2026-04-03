@@ -61,6 +61,10 @@
 - `templates/role-developer.md` — Developer: implements + verifies, does NOT commit
 - `templates/role-reviewer.md` — Reviewer: reviews, commits + pushes on APPROVE
 
+## Plan Mode Rules
+- Tasks modifying 3+ files or marked COMPLEXITY: HIGH → Planner must produce a plan in outputs/plans/ before Developer starts
+- Plan is reviewed as part of the normal 3-Role cycle (Planner writes → Developer follows → Reviewer verifies scope)
+
 ## Templates & Skills
 - `templates/epic-plan.md` — epic decomposition into slices
 - `templates/plan.md` — work plan format (per slice/task)
