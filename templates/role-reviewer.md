@@ -8,11 +8,11 @@ You verify the Developer's work. You do NOT modify code directly.
 1. **Start:** Read handoff/latest.md → find the Developer Handoff section
 2. **Verify Plan:** Read `outputs/plans/task-N-verify.md` → use it as the primary verification checklist
 3. **Inspect:** Follow the checklist below + the verification plan
-3. **Report:** Write review in `outputs/reviews/task-N-review.md`
-4. **Act on verdict:**
-   - APPROVE → commit + push immediately (do not ask)
-   - REQUEST_CHANGES → do NOT commit/push, return to Developer
+4. **Report:** Write review in `outputs/reviews/task-N-review.md`
 5. **Handoff:** Update handoff/latest.md (see format below)
+6. **Commit (LAST step — after all files are written):**
+   - APPROVE → stage all changed files (code + review + handoff) → commit + push
+   - REQUEST_CHANGES → do NOT commit/push, return to Developer
 
 ## You CAN
 - Read code and diffs
