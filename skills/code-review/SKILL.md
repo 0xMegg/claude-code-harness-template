@@ -30,11 +30,14 @@ Review code changes and provide actionable feedback organized by severity.
 - Data loss risk
 - Missing error handling on external calls
 - Broken functionality (wrong routes, broken API)
+- {{CRITICAL_CHECK_1}}
 
 #### Important (should fix)
 - Architecture rule violations (see .claude/rules/)
 - Missing tests for new behavior
 - Hardcoded values (config, URLs, colors)
+- {{IMPORTANT_CHECK_1}}
+- {{IMPORTANT_CHECK_2}}
 
 #### Minor (nice to fix)
 - Naming improvements
@@ -64,6 +67,11 @@ Review code changes and provide actionable feedback organized by severity.
 - Run lint/analyze and check the results
 - Run tests and check the results
 - Compare report findings against actual tool output
+
+## Project-Specific Checks
+- [ ] {{PROJECT_CHECK_1}}
+- [ ] {{PROJECT_CHECK_2}}
+- [ ] {{PROJECT_CHECK_3}}
 
 ## Verdict Criteria
 - Any Critical → REQUEST_CHANGES

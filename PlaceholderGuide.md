@@ -129,7 +129,34 @@ Project-specific pitfalls that Claude should always keep in mind. Fill these in 
 
 ---
 
-## 4. templates/verify.md — Verification Plan
+## 4. skills/ — Skill Placeholders
+
+### skills/bug-fix/SKILL.md
+
+| Placeholder | Description | Examples |
+|-------------|-------------|----------|
+| `{{LINT_CMD}}` | Same as CLAUDE.md | `dart analyze`, `npm run lint` |
+| `{{VERIFY_CHECK_1}}` | Project-specific verification | `Repository pattern followed`, `No direct DB calls from UI` |
+| `{{VERIFY_CHECK_2}}` | Project-specific verification | `GoRouter only (no Navigator.push)`, `Design tokens used` |
+| `{{PITFALL_1}}` | Common project-specific mistake | `Defining Providers inline in page files`, `Calling API directly from UI` |
+| `{{PITFALL_2}}` | Common project-specific mistake | `Forgetting RLS means no WHERE user_id needed`, `Missing try/catch on async calls` |
+
+### skills/code-review/SKILL.md
+
+| Placeholder | Description | Examples |
+|-------------|-------------|----------|
+| `{{CRITICAL_CHECK_1}}` | Project-specific critical issue | `RLS bypass`, `Missing auth check`, `SQL injection risk` |
+| `{{IMPORTANT_CHECK_1}}` | Project-specific important issue | `Direct DB calls from UI (must use Repository)`, `Provider defined inline in page` |
+| `{{IMPORTANT_CHECK_2}}` | Project-specific important issue | `Navigator.push used (should use GoRouter)`, `Hardcoded colors (use tokens)` |
+| `{{PROJECT_CHECK_1}}` | Project-wide architecture check | `Feature-local first principle followed` |
+| `{{PROJECT_CHECK_2}}` | Project-wide architecture check | `Data schema alignment (check schema doc)` |
+| `{{PROJECT_CHECK_3}}` | Project-wide architecture check | `RLS isolation maintained` |
+
+> These accumulate as you learn what breaks in your project. Fill during first review or after the first bug fix.
+
+---
+
+## 5. templates/verify.md — Verification Plan
 
 Uses the same `{{LINT_CMD}}`, `{{TEST_CMD}}`, `{{TEST_SINGLE_CMD}}`, `{{BUILD_CMD}}` as CLAUDE.md.
 No additional placeholders — the Planner fills in task-specific checks when writing each verification plan.
@@ -159,5 +186,6 @@ No additional placeholders — the Planner fills in task-specific checks when wr
 - `{{ARCHITECTURE_CHECK_*}}`, `{{SECURITY_CHECK}}` (can fill during first review)
 - `{{BLOG_LANGUAGE}}` (defaults to Korean if unfilled)
 - `{{GOTCHA_*}}` (accumulate during development — each bug fix adds candidates)
+- `{{VERIFY_CHECK_*}}`, `{{PITFALL_*}}`, `{{CRITICAL_CHECK_*}}`, `{{IMPORTANT_CHECK_*}}`, `{{PROJECT_CHECK_*}}` (fill during first review/bug fix)
 
 > **Key principle:** Build/test commands must be accurate for Claude to auto-verify after code changes. If those are correct, the rest can be filled incrementally.

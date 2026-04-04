@@ -41,11 +41,13 @@ Fix the bug with minimal blast radius and full verification.
 - If you find other bugs, note them in handoff (don't fix now)
 
 ### 6. Verify
-- [ ] Lint/analyze passes with no warnings
+- [ ] `{{LINT_CMD}}` passes with no warnings
 - [ ] Related tests pass
 - [ ] Regression test added
 - [ ] Project architecture rules followed (see .claude/rules/)
 - [ ] Manual reproduction no longer triggers the bug
+- [ ] {{VERIFY_CHECK_1}}
+- [ ] {{VERIFY_CHECK_2}}
 
 ### 7. Handoff
 - Update handoff/latest.md
@@ -56,3 +58,5 @@ Fix the bug with minimal blast radius and full verification.
 - Changing too many files at once
 - Forgetting to add a regression test
 - Mixing scope — doing refactoring alongside the fix
+- {{PITFALL_1}}
+- {{PITFALL_2}}
