@@ -12,7 +12,7 @@ $ARGUMENTS
 2. Inspect code changes using the checklist in templates/role-reviewer.md
 3. Run lint/analyze and tests
 4. Write review in outputs/reviews/task-N-review.md
-5. Verdict:
-   - APPROVE → commit + push immediately
+5. Update handoff/latest.md with Reviewer Handoff section
+6. Commit (LAST step — after all files are written):
+   - APPROVE → stage all changed files (code + review + handoff) → commit + push
    - REQUEST_CHANGES → do NOT commit, return to Developer
-6. Update handoff/latest.md with Reviewer Handoff section
