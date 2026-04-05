@@ -7,8 +7,11 @@ Follow the Reviewer role defined in templates/role-reviewer.md exactly.
 ## Task
 $ARGUMENTS
 
+## Critical Rule
+You MUST review exactly the task specified above. Do NOT substitute, reorder, or skip to a different task. Find the matching Developer Handoff for this specific task.
+
 ## Workflow
-1. Read handoff/latest.md → find the Developer Handoff section
+1. Read handoff/latest.md → find the Developer Handoff section for this task
 2. Inspect code changes using the checklist in templates/role-reviewer.md
 3. Run lint/analyze and tests
 4. Write review in outputs/reviews/task-N-review.md

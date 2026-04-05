@@ -2,7 +2,7 @@
 
 ## Project
 - Name: {{PROJECT_NAME}}
-- Type: {{PROJECT_TYPE}} (e.g., Web App, Mobile App, API Server, CLI Tool)
+- Type: {{PROJECT_TYPE}}
 - Stack: {{TECH_STACK}}
 
 ## Build & Test Commands
@@ -17,14 +17,13 @@
 ## Folder Boundaries
 - Source code: `{{SRC_DIR}}`
 - Tests: `{{TEST_DIR}}`
-- Config: project root
-- Do NOT modify: `.env`, `{{BUILD_OUTPUT}}/`, `{{LOCK_FILE}}`
+- Do NOT modify: `.env`, `{{BUILD_OUTPUT}}/`, `{{LOCK_FILE}}`, `{{PROTECTED_FILES}}`
 
 ## Architecture
-- {{ARCHITECTURE_PATTERN}} (e.g., Feature-First, MVC, Clean Architecture)
+- {{ARCHITECTURE_PATTERN}}
 - State management: {{STATE_MANAGEMENT}}
 - Routing: {{ROUTING}}
-- Data access: {{DATA_ACCESS_PATTERN}} (e.g., Repository pattern, direct ORM)
+- Data access: {{DATA_ACCESS_PATTERN}}
 
 ## Coding Conventions
 - Language: {{LANGUAGE}}
@@ -45,47 +44,23 @@
 - Never commit secrets, API keys, or .env files
 - Never run `rm -rf` on project directories
 - Never force push to main/master
-- Never modify {{PROTECTED_FILES}} without asking
 - Never add dependencies without stating the reason
 - Never do repo-wide refactor without explicit request
 
-## Key References
-- `{{SCHEMA_FILE}}` — data schema (source of truth), if applicable
-- `context/about-me.md` — project background and goals
-- `context/working-rules.md` — work principles and protocols
-- `context/decision-log.md` — past decisions and rationale (prevents re-litigating)
+## References
+- `context/` — project background, working rules, decision log
 - `handoff/latest.md` — current state and task queue (read at every session start)
+- `{{SCHEMA_FILE}}` — data schema (source of truth), if applicable
 
 ## 3-Role Workflow
-- `templates/role-planner.md` — Planner: read-only, writes plans to `outputs/plans/`
-- `templates/role-developer.md` — Developer: implements + verifies, does NOT commit
-- `templates/role-reviewer.md` — Reviewer: reviews, commits + pushes on APPROVE
-
-## Plan Mode Rules
-- Tasks modifying 3+ files or marked COMPLEXITY: HIGH → Planner must produce a plan in outputs/plans/ before Developer starts
-- Plan is reviewed as part of the normal 3-Role cycle (Planner writes → Developer follows → Reviewer verifies scope)
-
-## Templates & Skills
-- `templates/epic-plan.md` — epic decomposition into slices
-- `templates/plan.md` — work plan format (per slice/task)
-- `templates/handoff.md` — session handoff format
-- `templates/verify.md` — verification plan format
-- `templates/bug-fix.md` — bug fix workflow format
-- `skills/bug-fix/` — 7-step bug fix workflow
-- `skills/code-review/` — code review checklist
-
-## Gotchas
-- {{GOTCHA_1}}
-- {{GOTCHA_2}}
-- {{GOTCHA_3}}
+- `/plan` — Planner: read-only, writes plans to `outputs/plans/`
+- `/develop` — Developer: implements + verifies, does NOT commit
+- `/review` — Reviewer: reviews, commits + pushes on APPROVE
+- Tasks modifying 3+ files → Planner must produce a plan first
 
 ## Rules (auto-applied)
 - `.claude/rules/api.md` — API/DB rules
 - `.claude/rules/frontend.md` — UI rules
 - `.claude/rules/testing.md` — testing rules
 - `.claude/rules/git.md` — commit and branch rules
-
-## Outputs
-- `outputs/plans/` — Planner artifacts
-- `outputs/reviews/` — Reviewer artifacts
-- `outputs/archive/` — resolved past documents
+- `.claude/rules/gotchas.md` — project-specific pitfalls

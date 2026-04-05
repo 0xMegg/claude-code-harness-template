@@ -1,4 +1,4 @@
-# Claude Code Harness Template v3
+# Claude Code Harness Template v4
 
 Claude Code & Cowork 마스터 가이드(583p) 기반 재사용 가능 작업 환경 템플릿.
 
@@ -44,22 +44,29 @@ claude "docs/에 있는 기획안을 읽고, PlaceholderGuide.md를 참고해서
 
 ### Step 4: 개발 시작
 
-**작은 작업 (리팩터링, 버그 수정)** — `/plan`, `/develop`, `/review` 슬래시 커맨드 사용:
+#### 방법 A: 자동 실행 (권장)
+
+한 커맨드로 Plan → Develop → Review를 각각 새 세션에서 순차 실행:
+
+```bash
+# 단일 태스크
+./scripts/run-task.sh "Task 1 — 회원가입 폼 빈값 제출 버그 수정"
+
+# Epic (분해 + 각 Slice 자동 실행)
+./scripts/run-epic.sh "Epic 1 — 다이브 로그 입력 화면 전체 구현"
+```
+
+- 문제 없으면 자동으로 3단계 완료 (커밋+푸시 포함)
+- REQUEST_CHANGES → 해당 Slice에서 멈추고 리뷰 내용 출력
+- 로그: `/tmp/프로젝트명-run/{plan,develop,review}.log`
+
+#### 방법 B: 수동 실행 (세밀한 제어)
+
+각 단계를 별도 세션에서 수동으로:
 ```
 /plan Task 1 — 회원가입 폼 빈값 제출 버그 수정
 /develop Task 1 — 회원가입 폼 빈값 제출 버그 수정
 /review Task 1 — 회원가입 폼 빈값 제출 버그 수정
-```
-
-**큰 기능 (새 화면, 새 기능)** — Epic 분해 먼저:
-```
-# 1. Epic 분해
-/plan Epic 1 — 다이브 로그 입력 화면 전체 구현
-
-# 2. Slice 단위로 3-Role 반복
-/plan Task 1 — Epic 1 Slice 1: 데이터 모델 및 Repository
-/develop Task 1 — Epic 1 Slice 1: 데이터 모델 및 Repository
-/review Task 1 — Epic 1 Slice 1: 데이터 모델 및 Repository
 ```
 
 **REQUEST_CHANGES가 나오면:**
@@ -75,8 +82,8 @@ claude "docs/에 있는 기획안을 읽고, PlaceholderGuide.md를 참고해서
   ↓
 초기화 세션: 기획안 읽고 하네스 설정 완성
   ↓
-큰 기능 → Epic 분해 (Planner) → Slice별 3-Role 반복
-작은 작업 → Task별 3-Role 반복
+자동: ./scripts/run-epic.sh "Epic N — 기능"  (Epic 분해 + Slice별 3-Role 자동)
+수동: /plan → /develop → /review             (세밀한 제어가 필요할 때)
   ↓
 (handoff/latest.md + decision-log.md가 자동 업데이트되어 세션 간 상태 유지)
 ```
@@ -119,13 +126,14 @@ handoff/latest.md에 Task Queue로 정리해줘."
 
 ```
 project/
-├── CLAUDE.md                              # 프로젝트 계약서 (AI 진입점)
+├── CLAUDE.md                              # 프로젝트 계약서 (AI 진입점, ~50줄)
 ├── .claude/
 │   ├── settings.json                      # 권한/안전 설정
 │   ├── hooks/
 │   │   ├── block-dangerous.sh             # PreToolUse: 위험 명령 차단
-│   │   ├── post-edit-check.sh             # PostToolUse: 시크릿 감지
-│   │   └── post-edit-lint.sh              # PostToolUse: 자동 lint (프로젝트 자동 감지)
+│   │   ├── post-edit-check.sh             # PostToolUse: BLOCK/WARN 심각도 분리
+│   │   ├── post-edit-lint.sh              # PostToolUse: 자동 lint (프로젝트 자동 감지)
+│   │   └── post-edit-test.sh              # PostToolUse: 변경 영역 타겟 테스트 자동 실행
 │   ├── commands/
 │   │   ├── plan.md                        # /plan: Planner 역할 진입
 │   │   ├── develop.md                     # /develop: Developer 역할 진입
@@ -135,7 +143,8 @@ project/
 │       ├── api.md                         # API/DB 규칙
 │       ├── frontend.md                    # UI 규칙
 │       ├── testing.md                     # 테스트 규칙
-│       └── git.md                         # 커밋/브랜치 규칙
+│       ├── git.md                         # 커밋/브랜치 규칙
+│       └── gotchas.md                     # 프로젝트 고유 함정 (CLAUDE.md에서 분리)
 ├── context/
 │   ├── about-me.md                        # 프로젝트 배경
 │   ├── working-rules.md                   # 작업 원칙 + 3-Role Protocol
@@ -162,6 +171,9 @@ project/
 │   ├── plans/                             # Planner 산출물
 │   ├── reviews/                           # Reviewer 산출물
 │   └── archive/                           # 해결된 과거 문서
+├── scripts/
+│   ├── run-task.sh                        # 단일 Task 자동 실행 (Plan→Develop→Review)
+│   └── run-epic.sh                        # Epic 분해 + Slice별 자동 실행
 ├── docs/
 │   └── project-plan.md                    # 프로젝트 기획안 양식
 ├── PlaceholderGuide.md                    # 초기화 세션용: placeholder 채우기 가이드
@@ -199,6 +211,16 @@ CLAUDE.md (AI 진입점)
 ```
 
 ---
+
+## v3 → v4 변경사항
+
+| 개선 | v3 | v4 |
+|------|----|----|
+| 편집 후 검사 | 전부 WARNING (exit 0) | **BLOCK/WARN 심각도 분리** — 시크릿, 금지패턴은 exit 2로 블로킹 |
+| 편집 후 테스트 | 없음 (수동 실행) | **post-edit-test.sh** — 변경 영역 대응 테스트 자동 실행 |
+| CLAUDE.md | ~90줄 (Gotchas, Templates 등 포함) | **~50줄로 다이어트** — Gotchas → rules/gotchas.md 분리 |
+| Gotchas | CLAUDE.md 본문에 포함 | **rules/gotchas.md로 분리** — auto-applied rule로 승격 |
+| 금지 패턴 | 훅에 하드코딩 또는 없음 | **BLOCKED_PATTERNS 배열** — 프로젝트별 설정 가능 |
 
 ## v2 → v3 변경사항
 
@@ -243,9 +265,10 @@ CLAUDE.md (AI 진입점)
 | `handoff/` | 5.7 (Handoff > 세션 압축) |
 | `outputs/` | 5.2 (산출물 관리) |
 
-## 하네스 4요소
+## 하네스 5요소 (가이드북 기준)
 
-1. **Memoized Context** — CLAUDE.md, rules/, context/ → 매 턴마다 재사용
-2. **Tool Orchestration** — settings.json → 도구 허용/차단
-3. **Permission Gate** — hooks/ → 사전/사후 자동 점검
-4. **Resumable Session** — handoff/ → 세션 이어받기
+1. **Permissions** — settings.json → allow/deny/ask 라우팅
+2. **Validation** — hooks/ → 사전 차단(block-dangerous) + 사후 검증(check/lint/test)
+3. **Execution Mode** — commands/ → 3-Role 분리 (plan/develop/review 별도 세션)
+4. **State Maintenance** — handoff/ → 세션 간 연결고리, context/ → 배경 지식
+5. **Decision Trace** — decision-log.md → 의사결정 근거 기록 (재논의 방지)

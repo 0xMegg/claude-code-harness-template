@@ -3,6 +3,9 @@ Follow the Planner role defined in templates/role-planner.md exactly.
 ## Task
 $ARGUMENTS
 
+## Critical Rule
+You MUST plan exactly the task specified above. Do NOT substitute, reorder, or skip to a different task, even if handoff/latest.md suggests another task is more logical or ready. The user decides task order.
+
 ## Workflow
 1. Read handoff/latest.md → understand current state
 2. Check the most recent Reviewer Handoff for "Carry over to next Task" items

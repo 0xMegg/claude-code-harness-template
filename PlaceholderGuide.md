@@ -1,4 +1,4 @@
-# Placeholder Guide (v3)
+# Placeholder Guide (v4)
 
 This document lists every `{{PLACEHOLDER}}` in the harness template and how to fill them.
 Read the project plan in `docs/` first, then replace each placeholder with project-specific values.
@@ -59,18 +59,6 @@ These commands are used for automatic verification after every code change.
 | `{{IMPORT_STYLE}}` | Import style | `absolute (@/components)`, `relative`, `package imports first` |
 | `{{ERROR_HANDLING}}` | Error handling approach | `try/catch with typed errors`, `Result type`, `error wrapping` |
 
-### Gotchas
-
-Project-specific pitfalls that Claude should always keep in mind. Fill these in as you discover them during development — they don't need to be filled during init.
-
-| Placeholder | Description | Examples |
-|-------------|-------------|----------|
-| `{{GOTCHA_1}}` | Pitfall 1 | `build_runner must run before test`, `RLS hides rows silently` |
-| `{{GOTCHA_2}}` | Pitfall 2 | `iOS simulator needs manual cert refresh after 7 days` |
-| `{{GOTCHA_3}}` | Pitfall 3 | `Legacy code in lib/screens/ uses different patterns` |
-
-> Add or remove lines as needed. These accumulate over time — each bug fix or unexpected behavior is a candidate.
-
 ### Other
 
 | Placeholder | Description | Examples |
@@ -80,7 +68,45 @@ Project-specific pitfalls that Claude should always keep in mind. Fill these in 
 
 ---
 
-## 2. context/about-me.md — Project Background
+## 2. .claude/hooks/ — Hook Configuration
+
+### post-edit-check.sh (BLOCK/WARN patterns)
+
+| Placeholder | Description | Examples |
+|-------------|-------------|----------|
+| `{{BLOCKED_PATTERN_1}}` | Forbidden code pattern (blocks edit) | `Navigator\.push` (must use GoRouter) |
+| `{{BLOCKED_PATTERN_2}}` | Forbidden code pattern (blocks edit) | `Supabase\.instance` (must use Repository in UI layer) |
+| `{{BLOCKED_PATTERN_3}}` | Forbidden code pattern (blocks edit) | `document\.cookie` (direct cookie manipulation) |
+| `{{WARN_PATTERN_1}}` | Advisory pattern (logged, non-blocking) | `TODO:` (reminder to clean up) |
+| `{{WARN_PATTERN_2}}` | Advisory pattern (logged, non-blocking) | `console\.log` (remove before commit) |
+
+> Uncomment and fill patterns in the arrays inside post-edit-check.sh. BLOCK patterns cause exit 2 (edit is rejected). WARN patterns are logged but don't stop work.
+
+### post-edit-test.sh (targeted test runner)
+
+| Placeholder | Description | Examples |
+|-------------|-------------|----------|
+| `{{SRC_DIR}}` | Source code root (same as CLAUDE.md) | `lib`, `src`, `app` |
+| `{{TEST_DIR}}` | Test root (same as CLAUDE.md) | `test`, `tests`, `__tests__` |
+| `{{TEST_CMD}}` | Test runner command (same as CLAUDE.md) | `flutter test`, `npx vitest run`, `pytest` |
+
+> These must match CLAUDE.md values. The hook maps edited source files to test counterparts automatically.
+
+---
+
+## 3. .claude/rules/gotchas.md — Project Pitfalls
+
+| Placeholder | Description | Examples |
+|-------------|-------------|----------|
+| `{{GOTCHA_1}}` | Pitfall 1 | `build_runner must run before test`, `RLS hides rows silently` |
+| `{{GOTCHA_2}}` | Pitfall 2 | `iOS simulator needs manual cert refresh after 7 days` |
+| `{{GOTCHA_3}}` | Pitfall 3 | `Legacy code in lib/screens/ uses different patterns` |
+
+> Add or remove lines as needed. These accumulate over time — each bug fix or unexpected behavior is a candidate. Moved from CLAUDE.md to rules/ so it's auto-applied without bloating the contract.
+
+---
+
+## 4. context/about-me.md — Project Background
 
 | Placeholder | Description | Examples |
 |-------------|-------------|----------|
@@ -98,7 +124,7 @@ Project-specific pitfalls that Claude should always keep in mind. Fill these in 
 
 ---
 
-## 3. templates/role-*.md — Role Files
+## 5. templates/role-*.md — Role Files
 
 ### role-planner.md
 
@@ -129,7 +155,7 @@ Project-specific pitfalls that Claude should always keep in mind. Fill these in 
 
 ---
 
-## 4. skills/ — Skill Placeholders
+## 6. skills/ — Skill Placeholders
 
 ### skills/bug-fix/SKILL.md
 
@@ -156,14 +182,14 @@ Project-specific pitfalls that Claude should always keep in mind. Fill these in 
 
 ---
 
-## 5. templates/verify.md — Verification Plan
+## 7. templates/verify.md — Verification Plan
 
 Uses the same `{{LINT_CMD}}`, `{{TEST_CMD}}`, `{{TEST_SINGLE_CMD}}`, `{{BUILD_CMD}}` as CLAUDE.md.
 No additional placeholders — the Planner fills in task-specific checks when writing each verification plan.
 
 ---
 
-## 5. .claude/commands/blog.md — Blog Command
+## 8. .claude/commands/blog.md — Blog Command
 
 | Placeholder | Description | Examples |
 |-------------|-------------|----------|
@@ -186,6 +212,7 @@ No additional placeholders — the Planner fills in task-specific checks when wr
 - `{{ARCHITECTURE_CHECK_*}}`, `{{SECURITY_CHECK}}` (can fill during first review)
 - `{{BLOG_LANGUAGE}}` (defaults to Korean if unfilled)
 - `{{GOTCHA_*}}` (accumulate during development — each bug fix adds candidates)
+- `{{BLOCKED_PATTERN_*}}`, `{{WARN_PATTERN_*}}` (fill when you discover forbidden/advisory patterns)
 - `{{VERIFY_CHECK_*}}`, `{{PITFALL_*}}`, `{{CRITICAL_CHECK_*}}`, `{{IMPORTANT_CHECK_*}}`, `{{PROJECT_CHECK_*}}` (fill during first review/bug fix)
 
 > **Key principle:** Build/test commands must be accurate for Claude to auto-verify after code changes. If those are correct, the rest can be filled incrementally.
