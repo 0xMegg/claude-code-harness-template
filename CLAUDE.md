@@ -49,7 +49,12 @@
 
 ## References
 - `context/` — project background, working rules, decision log
+- `context/access-policy.md` — AI tool access policy (allowed / approval / blocked)
+- `context/mcp-policy.md` — MCP & external integration policy
 - `handoff/latest.md` — current state and task queue (read at every session start)
+- `docs/plugin-guide.md` — plugin structure, security checklist, deployment strategy
+- `docs/epic-guide.md` — epic decomposition, parallel stage execution, failure recovery
+- `templates/evaluation.md` — task evaluation metrics (fill after each task)
 - `{{SCHEMA_FILE}}` — data schema (source of truth), if applicable
 
 ## 3-Role Workflow

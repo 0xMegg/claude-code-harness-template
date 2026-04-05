@@ -27,6 +27,14 @@ if [ "${1:-}" = "--task-id" ] && [ -n "${2:-}" ]; then
   shift 2
 fi
 
+# Optional: --no-commit to skip git commit/push in Review phase
+# Used by run-epic.sh for parallel Stages (consolidated commit after Stage completes)
+NO_COMMIT=false
+if [ "${1:-}" = "--no-commit" ]; then
+  NO_COMMIT=true
+  shift
+fi
+
 TASK="$*"
 
 if [ -z "$TASK" ]; then
@@ -68,6 +76,11 @@ run_claude() {
   # When running in parallel (--task-id), override handoff file via prompt
   if [ -n "$TASK_ID" ]; then
     command="${command} (IMPORTANT: Use '${HANDOFF_FILE}' instead of 'handoff/latest.md' for all handoff reads and writes in this task.)"
+  fi
+
+  # When --no-commit is set, tell Reviewer not to git commit/push
+  if [ "$NO_COMMIT" = true ] && [ "$phase" = "review" ]; then
+    command="${command} (IMPORTANT: Do NOT run git commit or git push. Only write the review report and update the handoff file. Git will be handled by the orchestrator after all parallel slices complete.)"
   fi
 
   cd "$PROJECT_DIR"

@@ -1,19 +1,25 @@
 ---
 name: bug-fix
-description: Structured bug fix workflow — reproduce, diagnose, fix, verify
-version: 2.0.0
+description: >
+  버그 수정 워크플로. 다음과 같은 요청에 활성화:
+  "버그 수정해 줘", "이거 왜 안 돼?", "에러 발생", "동작이 이상해",
+  "regression 생겼어", "이전에 되던 게 안 됨", "fix this bug",
+  "broken", "not working"
+  다음에는 활성화하지 않음:
+  "리팩토링해 줘", "새 기능 추가", "성능 개선", "코드 정리"
+version: 3.0.0
 ---
 
 # Bug Fix Skill
 
-## Goal
+## Objective
 Fix the bug with minimal blast radius and full verification.
 
-## Input Required
+## Inputs
 - Bug description (what is broken)
 - Reproduction steps (or enough info to find them)
 
-## Steps
+## Process
 
 ### 1. Understand
 - Read the bug report
@@ -53,10 +59,13 @@ Fix the bug with minimal blast radius and full verification.
 - Update handoff/latest.md
 - Record what changed, why, and any remaining risk
 
-## Common Pitfalls
+## Gotchas
 - Fixing the symptom instead of the root cause
 - Changing too many files at once
 - Forgetting to add a regression test
 - Mixing scope — doing refactoring alongside the fix
+- 불확실한 원인은 추측하지 말고 "확인 필요"로 표시
+- 3회 이상 가설이 틀리면 사람에게 에스컬레이션
+- 에러 메시지만 보고 원인을 단정하지 말 것 — 실제 코드 경로를 반드시 추적
 - {{PITFALL_1}}
 - {{PITFALL_2}}

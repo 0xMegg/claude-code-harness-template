@@ -184,6 +184,56 @@ echo ""
 # Parallel execution helpers
 # ============================================================
 
+# Commit all changes from a parallel stage in one consolidated commit
+# Args: stage_number slice_indices...
+commit_stage() {
+  local stage_num="$1"
+  shift
+  local indices=("$@")
+
+  echo -e "${BLUE}Committing Stage $stage_num changes...${NC}"
+
+  cd "$PROJECT_DIR"
+
+  # Check if there are any changes to commit
+  if [ -z "$(git status --porcelain)" ]; then
+    echo -e "${YELLOW}! No changes to commit for Stage $stage_num${NC}"
+    return 0
+  fi
+
+  # Build slice summaries for commit message
+  local slice_summaries=""
+  for idx in "${indices[@]}"; do
+    local desc="${SLICES[$idx]}"
+    local short_desc
+    short_desc=$(echo "$desc" | sed -E 's/^(Slice|Task|태스크|슬라이스)\s+[0-9]+\s*[-—:]\s*//')
+    if [ -n "$slice_summaries" ]; then
+      slice_summaries="${slice_summaries} + ${short_desc}"
+    else
+      slice_summaries="$short_desc"
+    fi
+  done
+
+  local commit_msg="feat: Stage ${stage_num} — ${slice_summaries}"
+
+  # Stage all changes, commit, and push
+  git add -A
+  if ! git commit -m "$commit_msg"; then
+    echo -e "${RED}✗ Git commit failed for Stage $stage_num${NC}"
+    return 1
+  fi
+
+  if git push; then
+    echo -e "${GREEN}✓ Stage $stage_num committed and pushed${NC}"
+    echo "  Commit: $(git rev-parse --short HEAD)"
+    echo "  Message: $commit_msg"
+  else
+    echo -e "${YELLOW}! Git push failed for Stage $stage_num — commit exists locally${NC}"
+    echo "  Run 'git push' manually to sync."
+    # Don't fail the whole epic — the commit is safe locally
+  fi
+}
+
 # Run a single stage's slices in parallel
 # Args: stage_number slice_indices...
 run_parallel_stage() {
@@ -227,7 +277,7 @@ run_parallel_stage() {
 
       echo -e "  ${BLUE}Starting: Slice $((idx+1)) — ${slice_desc}${NC}"
 
-      "$SCRIPT_DIR/run-task.sh" --task-id "slice-${idx}" "$slice_desc" \
+      "$SCRIPT_DIR/run-task.sh" --task-id "slice-${idx}" --no-commit "$slice_desc" \
         > "${task_log_dir}/stdout.log" 2>&1 &
 
       pids+=($!)
@@ -366,6 +416,14 @@ for stage_num in $(seq 1 "$STAGE_COUNT"); do
 
     # Merge parallel handoff files back
     merge_stage_handoffs "$stage_num" "${stage_indices[@]}"
+
+    # Consolidated git commit for all parallel slices in this stage
+    if ! commit_stage "$stage_num" "${stage_indices[@]}"; then
+      echo -e "${RED}✗ Stage $stage_num commit failed${NC}"
+      echo "Changes are in the working directory. Commit manually with:"
+      echo "  git add -A && git commit -m 'feat: Stage ${stage_num}' && git push"
+      exit 1
+    fi
   fi
 
   COMPLETED_STAGES=$((COMPLETED_STAGES+1))
