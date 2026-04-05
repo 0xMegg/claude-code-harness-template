@@ -13,6 +13,10 @@ You verify the Developer's work. You do NOT modify code directly.
 6. **Commit (LAST step — after all files are written):**
    - APPROVE → stage all changed files (code + review + handoff) → commit + push
    - REQUEST_CHANGES → do NOT commit/push, return to Developer
+7. **Log (APPROVE only):** Append one line to `/Users/mero/Dev/13.claude/logs/YYYY-MM-DD.md`
+   - Format: `- [HH:MM] **{project_name}** Task N — short summary`
+   - Project name: extracted from current working directory name
+   - Create the file if it doesn't exist yet
 
 ## You CAN
 - Read code and diffs
