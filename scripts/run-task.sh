@@ -16,11 +16,23 @@ CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT_NAME="{{PROJECT_NAME}}"
 LOG_DIR="/tmp/${PROJECT_NAME}-run"
+
+# Optional: --task-id <id> for parallel execution isolation
+TASK_ID=""
+HANDOFF_FILE="handoff/latest.md"
+if [ "${1:-}" = "--task-id" ] && [ -n "${2:-}" ]; then
+  TASK_ID="$2"
+  HANDOFF_FILE="handoff/task-${TASK_ID}.md"
+  LOG_DIR="${LOG_DIR}/task-${TASK_ID}"
+  shift 2
+fi
+
 TASK="$*"
 
 if [ -z "$TASK" ]; then
-  echo "Usage: $0 <task description>"
+  echo "Usage: $0 [--task-id <id>] <task description>"
   echo "Example: $0 Task 1 — 회원가입 폼 빈값 제출 버그 수정"
+  echo "Example: $0 --task-id slice-1 Task 1 — 회원가입 폼"
   exit 1
 fi
 
@@ -52,6 +64,11 @@ run_claude() {
   local phase="$1"
   local command="$2"
   local log_file="${LOG_DIR}/${phase}.log"
+
+  # When running in parallel (--task-id), override handoff file via prompt
+  if [ -n "$TASK_ID" ]; then
+    command="${command} (IMPORTANT: Use '${HANDOFF_FILE}' instead of 'handoff/latest.md' for all handoff reads and writes in this task.)"
+  fi
 
   cd "$PROJECT_DIR"
   echo "Running: claude -p \"$command\""
@@ -128,4 +145,8 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}  TASK COMPLETE: $TASK${NC}"
 echo -e "${GREEN}════════════════════════════════════════${NC}"
 echo ""
-echo "Logs: $LOG_DIR/{plan,develop,review}.log"
+if [ -n "$TASK_ID" ]; then
+  echo "Logs: $LOG_DIR/{plan,develop,review}.log (task-id: $TASK_ID)"
+else
+  echo "Logs: $LOG_DIR/{plan,develop,review}.log"
+fi

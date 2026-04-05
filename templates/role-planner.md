@@ -27,6 +27,24 @@ You do NOT modify code. Read only.
 - Run build/test commands
 - Run git commit/push
 
+## Parallel Planning (Epic Plans)
+When decomposing an Epic into Stages & Slices:
+
+### Same Stage (parallel) rules:
+- Slices in the same Stage run **in parallel** — they must NOT modify the same files
+- No data dependencies between slices in the same Stage
+- Each parallel slice must have independent, non-overlapping tests
+- No overlapping git hunks (different files = safe)
+
+### Stage boundaries (sequential) rules:
+- Each Stage boundary is a synchronization point — all slices must pass before the next Stage starts
+- Later Stages can depend on everything from earlier Stages
+- Use the `Depends on:` field in each Slice to make dependencies explicit
+
+### When in doubt:
+- Put slices in **separate Stages** — sequential is always safe, parallel is an optimization
+- Prefer 2 sequential Stages over 1 risky parallel Stage
+
 ## References
 - context/about-me.md — project background
 - context/decision-log.md — past decisions (check before re-deciding anything)

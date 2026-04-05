@@ -10,6 +10,7 @@
 - Related files: [file paths to modify/reference]
 - Related issues: [related Task numbers or issues]
 - Dependencies: [prerequisite tasks, if any]
+- Stage: [Stage number this task belongs to, if part of an Epic]
 
 ## Approach
 1. [Step 1]
