@@ -17,11 +17,29 @@ Epic은 단일 Task로 끝나지 않는 기능 단위의 작업이다.
 |------|------|
 | 수정 파일 1~2개, 단일 관심사 | Task 하나로 충분 |
 | 수정 파일 3~5개, 하나의 기능 | Task 하나지만 Planner가 plan 먼저 |
-| 수정 파일 6개 이상, 복수 관심사 | **Epic으로 분해** |
+| 수정 파일 6~9개, 단일 관심사 | **Epic Lite** (Stage 없이 단일 Task) |
+| 수정 파일 6~9개, 복수 관심사 | **Epic으로 분해** |
+| 수정 파일 10개 이상 | **Epic으로 분해** (Stage 필수) |
 | DB 스키마 + API + UI가 함께 바뀜 | **Epic으로 분해** |
 | "이거 하나만 하면 돼"인데 설명이 3줄 넘어감 | Epic일 가능성 높음 |
 
 판단이 애매하면 Epic으로 시작한다. Slice가 1개뿐인 Epic은 자동으로 단일 Task처럼 동작한다.
+
+### Epic Lite
+Opus 4.6은 2시간 이상 일관된 빌드를 유지할 수 있다.
+10파일 미만 + 단일 관심사인 경우 Stage 분해 없이 단일 Task로 처리하면 된다.
+
+**Epic Lite 조건:**
+- 수정 파일 6~9개
+- 관심사가 1개 (데이터+로직+UI가 하나의 기능에 속함)
+- 외부 의존성 변경 없음
+
+**Epic Lite가 아닌 경우 (Full Epic 필요):**
+- 파일 10개 이상
+- 관심사 2개 이상 (예: 인증 + 결제가 동시에 바뀜)
+- DB 마이그레이션 + API + UI가 독립적으로 실패할 수 있음
+
+이 판단은 Planner가 수행한다. Epic Lite로 시작했다가 중간에 범위가 커지면 Full Epic으로 전환.
 
 ## Epic 분해 원칙
 
@@ -124,6 +142,38 @@ Epic 단위에서는 Slice별 평가를 모아 반복되는 실패 패턴을 분
 Epic plan 작성 시 다음을 확인한다:
 - `context/access-policy.md` — 이 Epic에 사람 승인이 필요한 작업이 있는가?
 - `context/mcp-policy.md` — 외부 서비스 연결이 필요한가? allowlist에 있는가?
+
+---
+
+## Multi-Repo Workspaces
+
+워크스페이스 루트에 `.git/`이 없고, 하위 디렉토리(e.g., `backend/`, `frontend/`)가 각각 독립된 git repo인 경우.
+
+### commit_stage() 동작
+- 워크스페이스 루트가 git repo인지 먼저 확인
+- git repo가 아니면 직계 하위 디렉토리에서 `.git/`을 가진 repo를 탐색
+- 변경이 있는 각 repo에서 독립적으로 commit + push
+- 커밋 메시지에 `[repo-name]` 접두사 추가: `feat: Stage 1 [backend] — auth API`
+
+### Planner 주의사항
+- Slice의 Files 필드에 repo 이름을 접두사로 표기: `backend/src/api/auth.ts`
+- 각 Slice에 `**Repo:**` 필드로 대상 repo 명시
+- 같은 Stage 내 파일 겹침 규칙은 전체 워크스페이스 기준 (repo별이 아님)
+- 서로 다른 repo만 수정하는 Slice는 병렬 실행에 안전
+- 크로스리포 의존성(e.g., API 변경 → UI 반영)은 별도 Stage로 분리
+
+### Reviewer 주의사항
+- 각 repo에서 개별적으로 git status → add → commit → push
+- 핸드오프에 각 repo의 커밋 해시 기록
+- 워크스페이스 루트에서 `git` 명령을 실행하지 않는다
+
+### Deploy Hook
+- `scripts/deploy-hook.sh`가 존재하고 실행 가능하면, 각 Stage 커밋 후 자동 실행
+- 인자: stage 번호 (`$1`)
+- 실패해도 Epic은 계속 진행 (non-blocking)
+
+### 단일 Repo 워크스페이스
+- 기존과 완전히 동일하게 동작. 변경 없음.
 
 ---
 
@@ -277,3 +327,26 @@ Epic 1 — 회원가입 기능
 
 이 예시에서 Stage 2의 Slice 2와 Slice 3는 파일이 겹치지 않으므로 병렬 실행된다.
 Stage 3의 Slice 4는 둘 다에 의존하므로 반드시 Stage 2 완료 후 실행된다.
+
+### Multi-Repo 예시
+
+Multi-repo 워크스페이스에서는 `**Repo:**` 필드와 파일 경로에 repo 접두사를 붙인다:
+
+```markdown
+### Stage 2
+#### Slice 2: Auth API
+- **What:** 회원가입 + 로그인 API
+- **Repo:** backend
+- **Files:** backend/src/services/auth.ts, backend/src/routes/auth.ts
+- **Depends on:** Stage 1
+- **Done when:** API 테스트 통과
+
+#### Slice 3: Auth UI
+- **What:** 로그인 화면
+- **Repo:** frontend
+- **Files:** frontend/src/pages/login.tsx, frontend/src/hooks/useAuth.ts
+- **Depends on:** Stage 1
+- **Done when:** 로그인 폼 표시 + API 연동
+```
+
+Slice 2와 3은 서로 다른 repo만 수정하므로 같은 Stage에서 병렬 실행 가능.

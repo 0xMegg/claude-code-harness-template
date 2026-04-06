@@ -15,26 +15,35 @@ Each session performs exactly one role. When given a role file (`templates/role-
 
 If no role is specified (general session):
 1. Start: read `handoff/latest.md` for current state
-2. Execute: make changes, run lint/analyze
-3. Verify: confirm tests pass
-4. Handoff: update `handoff/latest.md`
+2. **판단:** 사용자의 요청이 기획/논의인지, 실행인지 먼저 구분
+   - 기획/논의: Epic 분해, 아키텍처 결정, 방향 토론 → **코드를 수정하지 않는다.** Planner 모드로 동작
+   - 실행: 명시적으로 "구현해", "만들어", "수정해" → Developer 모드로 동작
+3. Execute: make changes, run lint/analyze (실행 요청일 때만)
+4. Verify: confirm tests pass
+5. Handoff: update `handoff/latest.md`
+
+## Default Mode Rule
+역할이 명시되지 않은 대화에서는 **기획 모드(read-only)**가 기본이다.
+- Epic, 기능, 아키텍처를 논의할 때 코드를 수정하거나 파일을 생성하지 않는다
+- 사용자가 "구현해", "실행해", "/develop" 등 명시적 실행 지시를 할 때만 코드를 건드린다
+- 애매하면 "기획만 할까요, 구현까지 할까요?" 물어본다
+- 기획 결과물(plan, epic-plan)은 `outputs/plans/`에 저장해도 된다 — 코드 파일은 안 됨
 
 ## Session Management
 - **Continue (`--continue`):** same task, same context — pick up where you left off
 - **Resume (`--resume`):** browse past sessions and select one to continue
 - **Fork (`--fork-session`):** branch off into a different direction from the current session
 - **Worktree (`--worktree`):** parallel implementation on separate files — never edit the same file in two sessions
-- When the session gets long, run `/compact` before critical context is lost
+- 세션이 길어지면 handoff를 작성한 뒤 **새 세션으로 시작** (context reset)
 - After a direction change, prefer `--fork-session` over continuing in a polluted context
 
-## Compact Rules
-When running `/compact`, always preserve:
-- Last modified files and why
-- Test results (pass/fail/not run)
-- Discarded alternatives and reasons
-- The single next action for the next turn
-- Risk points needing human review
-- Current Task number and plan location
+## Context Reset Rules
+Compaction(요약)보다 Reset(새 세션)이 더 낫다.
+Compaction은 "context anxiety"를 유발하여 모델이 작업을 조기 마무리하려는 경향을 만든다.
+- 작업 경계가 바뀌면 → handoff 작성 → 새 세션
+- 같은 task 내에서도 2시간 이상 → handoff 작성 → 새 세션
+- 새 세션 시작 시: handoff + plan + 관련 파일을 다시 읽고 시작
+- `/compact`는 정말 불가피할 때만 — 기본 전략이 아닌 예외
 
 ## Communication
 - If uncertain about scope, ask before implementing
@@ -75,9 +84,9 @@ When running `/compact`, always preserve:
 
 ### 세션 분리 기준
 - 작업 경계가 바뀌면 세션도 끊기
-- /compact → 같은 세션 이어가기 (빠르지만 세션 피로 완전 제거 못함)
-- 리셋 (새 세션) → handoff와 plan이 더 단단해야 함 (깨끗한 출발점)
-- 압축 뒤에는 바로 이어서 밀어붙기보다, 현재 task plan과 관련 파일을 다시 읽고 시작
+- 기본 전략: 리셋 (새 세션) → handoff와 plan이 더 단단해야 함 (깨끗한 출발점)
+- Opus 4.6은 2시간+ 세션도 일관성 유지 가능 — 불필요한 세션 분리 금지
+- 새 세션 시작 시: handoff + plan + 관련 파일을 다시 읽고 시작
 
 ### MCP 상주 비용
 - 도구 설명과 출력이 컨텍스트를 미리 차지

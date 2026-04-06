@@ -3,8 +3,10 @@
 #
 # Usage:
 #   ./scripts/run-task.sh "Task 1 — 회원가입 폼 빈값 제출 버그 수정"
+#   ./scripts/run-task.sh --max-iter 3 "Task 1 — 로그인 UI"
 #
 # Each phase runs as an independent claude -p session (clean context).
+# With --max-iter N, Develop→Review loops up to N times on ITERATE verdict.
 # Stops on failure. Logs saved to /tmp/{{PROJECT_NAME}}-run/
 
 set -euo pipefail
@@ -35,12 +37,22 @@ if [ "${1:-}" = "--no-commit" ]; then
   shift
 fi
 
+# Optional: --max-iter N for iterative refinement loop (Develop→Review up to N times)
+# On ITERATE verdict, the Developer refines and Reviewer re-evaluates.
+# Default: 1 (no iteration — backward compatible)
+MAX_ITER=1
+if [ "${1:-}" = "--max-iter" ] && [ -n "${2:-}" ]; then
+  MAX_ITER="$2"
+  shift 2
+fi
+
 TASK="$*"
 
 if [ -z "$TASK" ]; then
-  echo "Usage: $0 [--task-id <id>] <task description>"
+  echo "Usage: $0 [--task-id <id>] [--no-commit] [--max-iter N] <task description>"
   echo "Example: $0 Task 1 — 회원가입 폼 빈값 제출 버그 수정"
   echo "Example: $0 --task-id slice-1 Task 1 — 회원가입 폼"
+  echo "Example: $0 --max-iter 3 Task 1 — 로그인 UI (iterate up to 3 times)"
   exit 1
 fi
 
@@ -110,45 +122,79 @@ fi
 log_success "Plan phase complete"
 
 # ============================================================
-# Phase 2: Develop
+# Phase 2-3: Develop → Review (with iteration loop)
 # ============================================================
-log_phase "PHASE 2/3: DEVELOP"
+ITER=1
+VERDICT=""
 
-if ! run_claude "develop" "/develop $TASK"; then
-  log_fail "Develop phase failed. Check ${LOG_DIR}/develop.log"
-  exit 1
-fi
+while [ "$ITER" -le "$MAX_ITER" ]; do
+  # --- Develop ---
+  if [ "$ITER" -eq 1 ]; then
+    log_phase "PHASE 2/3: DEVELOP"
+    DEVELOP_PROMPT="/develop $TASK"
+  else
+    log_phase "ITERATION ${ITER}/${MAX_ITER}: DEVELOP (refinement)"
+    DEVELOP_PROMPT="/develop $TASK — ITERATE 피드백 반영 (iteration ${ITER})"
+  fi
 
-log_success "Develop phase complete"
+  DEVELOP_LOG="${LOG_DIR}/develop-iter${ITER}.log"
+  # Override log file for iteration tracking
+  if ! run_claude "develop-iter${ITER}" "$DEVELOP_PROMPT"; then
+    log_fail "Develop phase failed (iter ${ITER}). Check ${DEVELOP_LOG}"
+    exit 1
+  fi
+  log_success "Develop phase complete (iter ${ITER})"
 
-# ============================================================
-# Phase 3: Review
-# ============================================================
-log_phase "PHASE 3/3: REVIEW"
+  # --- Review ---
+  if [ "$ITER" -eq 1 ]; then
+    log_phase "PHASE 3/3: REVIEW"
+  else
+    log_phase "ITERATION ${ITER}/${MAX_ITER}: REVIEW"
+  fi
 
-if ! run_claude "review" "/review $TASK"; then
-  log_fail "Review phase failed. Check ${LOG_DIR}/review.log"
-  exit 1
-fi
+  REVIEW_LOG="${LOG_DIR}/review-iter${ITER}.log"
+  if ! run_claude "review-iter${ITER}" "/review $TASK"; then
+    log_fail "Review phase failed (iter ${ITER}). Check ${REVIEW_LOG}"
+    exit 1
+  fi
 
-# Check verdict
-REVIEW_LOG="${LOG_DIR}/review.log"
+  # Check verdict
+  if grep -qi "REQUEST_CHANGES\|request.changes" "$REVIEW_LOG" 2>/dev/null; then
+    log_fail "Review verdict: REQUEST_CHANGES (iter ${ITER})"
+    echo ""
+    echo "Review output: $REVIEW_LOG"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Read the review: cat $REVIEW_LOG"
+    echo "  2. Fix: /develop $TASK — REQUEST_CHANGES 수정"
+    echo "  3. Re-review: /review $TASK"
+    exit 1
+  fi
 
-if grep -qi "REQUEST_CHANGES\|request.changes" "$REVIEW_LOG" 2>/dev/null; then
-  log_fail "Review verdict: REQUEST_CHANGES"
-  echo ""
-  echo "Review output: $REVIEW_LOG"
-  echo ""
-  echo "Next steps:"
-  echo "  1. Read the review: cat $REVIEW_LOG"
-  echo "  2. Fix: /develop $TASK — REQUEST_CHANGES 수정"
-  echo "  3. Re-review: /review $TASK"
-  exit 1
-fi
+  if grep -qi "ITERATE" "$REVIEW_LOG" 2>/dev/null; then
+    if [ "$ITER" -lt "$MAX_ITER" ]; then
+      log_warn "Review verdict: ITERATE (iter ${ITER}/${MAX_ITER}) — refining..."
+      ITER=$((ITER + 1))
+      continue
+    else
+      log_warn "Review verdict: ITERATE but max iterations reached (${MAX_ITER})"
+      log_warn "Accepting current state. Manual refinement may be needed."
+      VERDICT="ITERATE_EXHAUSTED"
+      break
+    fi
+  fi
 
-if grep -qi "APPROVE" "$REVIEW_LOG" 2>/dev/null; then
-  log_success "Review verdict: APPROVE"
-fi
+  if grep -qi "APPROVE" "$REVIEW_LOG" 2>/dev/null; then
+    log_success "Review verdict: APPROVE (iter ${ITER})"
+    VERDICT="APPROVE"
+    break
+  fi
+
+  # No recognized verdict — treat as done
+  log_warn "No clear verdict detected in review log"
+  VERDICT="UNKNOWN"
+  break
+done
 
 # ============================================================
 # Done
@@ -156,10 +202,13 @@ fi
 echo ""
 echo -e "${GREEN}════════════════════════════════════════${NC}"
 echo -e "${GREEN}  TASK COMPLETE: $TASK${NC}"
+if [ "$ITER" -gt 1 ]; then
+  echo -e "${GREEN}  Iterations: ${ITER} (verdict: ${VERDICT})${NC}"
+fi
 echo -e "${GREEN}════════════════════════════════════════${NC}"
 echo ""
 if [ -n "$TASK_ID" ]; then
-  echo "Logs: $LOG_DIR/{plan,develop,review}.log (task-id: $TASK_ID)"
+  echo "Logs: $LOG_DIR/ (task-id: $TASK_ID)"
 else
-  echo "Logs: $LOG_DIR/{plan,develop,review}.log"
+  echo "Logs: $LOG_DIR/"
 fi

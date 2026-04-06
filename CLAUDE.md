@@ -14,6 +14,29 @@
 - Lint/Analyze: `{{LINT_CMD}}`
 - Format: `{{FORMAT_CMD}}`
 
+<!-- Multi-Repo (uncomment if workspace has multiple git repos)
+## Multi-Repo Structure
+This workspace coordinates multiple independent repositories:
+- `{{REPO_1}}/` — {{REPO_1_DESCRIPTION}}
+- `{{REPO_2}}/` — {{REPO_2_DESCRIPTION}}
+
+### {{REPO_1}} Commands
+- Install: `cd {{REPO_1}} && {{REPO_1_INSTALL}}`
+- Dev/Run: `cd {{REPO_1}} && {{REPO_1_DEV}}`
+- Test: `cd {{REPO_1}} && {{REPO_1_TEST}}`
+- Lint: `cd {{REPO_1}} && {{REPO_1_LINT}}`
+
+### {{REPO_2}} Commands
+- Install: `cd {{REPO_2}} && {{REPO_2_INSTALL}}`
+- Dev/Run: `cd {{REPO_2}} && {{REPO_2_DEV}}`
+- Lint: `cd {{REPO_2}} && {{REPO_2_LINT}}`
+
+## Multi-Repo Discipline
+- Preserve repository boundaries — each slice targets one repo unless explicitly cross-repo
+- Do not assume a change in one repo requires a change in another
+- Keep integration contracts explicit between repos
+-->
+
 ## Folder Boundaries
 - Source code: `{{SRC_DIR}}`
 - Tests: `{{TEST_DIR}}`

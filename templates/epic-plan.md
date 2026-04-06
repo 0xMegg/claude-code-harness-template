@@ -18,30 +18,38 @@ Break the epic into independently deliverable slices, grouped into stages.
 
 If parallelism is not needed, put all slices in a single stage or omit Stage headings entirely (backward compatible — treated as sequential).
 
+**Epic Lite:** 수정 파일 6~9개 + 단일 관심사 → Stage 분해 없이 Slice 1개로 작성.
+Opus 4.6은 이 규모를 한 세션에서 일관되게 처리할 수 있다.
+(자세한 기준은 `docs/epic-guide.md`의 "Epic Lite" 참조)
+
 ### Stage 1
 #### Slice 1: [name]
 - **What:** [what this slice delivers]
-- **Files:** [expected files to create/modify]
+- **Repo:** [target repo name — omit for single-repo]
+- **Files:** [expected files to create/modify — multi-repo: use repo prefix e.g. `backend/src/...`]
 - **Depends on:** (none)
 - **Done when:** [specific acceptance criteria]
 
 #### Slice 2: [name]
 - **What:** [what this slice delivers]
-- **Files:** [expected files to create/modify]
+- **Repo:** [target repo name]
+- **Files:** [expected files]
 - **Depends on:** (none)
 - **Done when:** [specific acceptance criteria]
 
 ### Stage 2
 #### Slice 3: [name]
 - **What:** [what this slice delivers]
-- **Files:** [expected files to create/modify]
+- **Repo:** [target repo name]
+- **Files:** [expected files]
 - **Depends on:** Stage 1
 - **Done when:** [specific acceptance criteria]
 
 ### Stage N
 #### Slice N: [name]
 - **What:** [what this slice delivers]
-- **Files:** [expected files to create/modify]
+- **Repo:** [target repo name]
+- **Files:** [expected files]
 - **Depends on:** [Stage number or "none"]
 - **Done when:** [specific acceptance criteria]
 
@@ -52,7 +60,8 @@ If parallelism is not needed, put all slices in a single stage or omit Stage hea
 - No slice should touch more than ~5 files
 
 ### Parallel Rules (same Stage)
-- Slices in the same Stage must NOT modify the same files
+- Slices in the same Stage must NOT modify the same files (전체 워크스페이스 기준, repo별이 아님)
+- Multi-repo: 서로 다른 repo만 수정하는 Slice는 파일 겹침이 불가능하므로 병렬 안전
 - Slices in the same Stage must NOT have data dependencies on each other
 - Each parallel slice must have independent tests
 - When in doubt, put slices in separate Stages (sequential is always safe)

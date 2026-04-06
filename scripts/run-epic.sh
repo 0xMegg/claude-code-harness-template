@@ -53,6 +53,37 @@ log_phase() {
 }
 
 # ============================================================
+# Git repo discovery (multi-repo support)
+# ============================================================
+# If PROJECT_DIR is a git repo, returns PROJECT_DIR only.
+# Otherwise, finds immediate child directories that are git repos.
+discover_git_repos() {
+  if [ -d "$PROJECT_DIR/.git" ] || git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+    echo "$PROJECT_DIR"
+    return
+  fi
+
+  local repos=()
+  for dir in "$PROJECT_DIR"/*/; do
+    if [ -d "${dir}.git" ]; then
+      repos+=("${dir%/}")
+    fi
+  done
+
+  if [ ${#repos[@]} -eq 0 ]; then
+    echo -e "${RED}WARNING: No git repos found under $PROJECT_DIR${NC}" >&2
+    return 1
+  fi
+
+  printf '%s\n' "${repos[@]}"
+}
+
+IS_MULTI_REPO=false
+if ! [ -d "$PROJECT_DIR/.git" ] && ! git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+  IS_MULTI_REPO=true
+fi
+
+# ============================================================
 # Normalize input: bare number → "Epic N"
 # ============================================================
 if [[ "$EPIC" =~ ^[0-9]+$ ]]; then
@@ -186,20 +217,13 @@ echo ""
 
 # Commit all changes from a parallel stage in one consolidated commit
 # Args: stage_number slice_indices...
+# Multi-repo: commits to each git repo that has changes independently
 commit_stage() {
   local stage_num="$1"
   shift
   local indices=("$@")
 
   echo -e "${BLUE}Committing Stage $stage_num changes...${NC}"
-
-  cd "$PROJECT_DIR"
-
-  # Check if there are any changes to commit
-  if [ -z "$(git status --porcelain)" ]; then
-    echo -e "${YELLOW}! No changes to commit for Stage $stage_num${NC}"
-    return 0
-  fi
 
   # Build slice summaries for commit message
   local slice_summaries=""
@@ -214,23 +238,64 @@ commit_stage() {
     fi
   done
 
-  local commit_msg="feat: Stage ${stage_num} — ${slice_summaries}"
+  local committed=false
 
-  # Stage all changes, commit, and push
-  git add -A
-  if ! git commit -m "$commit_msg"; then
-    echo -e "${RED}✗ Git commit failed for Stage $stage_num${NC}"
-    return 1
+  # Commit in each git repo that has changes
+  while IFS= read -r repo_dir; do
+    cd "$repo_dir"
+
+    if [ -z "$(git status --porcelain)" ]; then
+      if $IS_MULTI_REPO; then
+        echo -e "  ${YELLOW}[$(basename "$repo_dir")] No changes${NC}"
+      fi
+      continue
+    fi
+
+    local repo_name
+    repo_name=$(basename "$repo_dir")
+    local commit_msg
+    if $IS_MULTI_REPO; then
+      commit_msg="feat: Stage ${stage_num} [${repo_name}] — ${slice_summaries}"
+    else
+      commit_msg="feat: Stage ${stage_num} — ${slice_summaries}"
+    fi
+
+    git add -A
+    if ! git commit -m "$commit_msg"; then
+      echo -e "${RED}✗ Git commit failed in ${repo_name} for Stage $stage_num${NC}"
+      cd "$PROJECT_DIR"
+      return 1
+    fi
+
+    if git push; then
+      echo -e "${GREEN}✓ [${repo_name}] Stage $stage_num committed and pushed${NC}"
+      echo "  Commit: $(git rev-parse --short HEAD)"
+    else
+      echo -e "${YELLOW}! [${repo_name}] Git push failed — commit exists locally${NC}"
+      echo "  Run 'cd ${repo_dir} && git push' manually."
+    fi
+    committed=true
+  done < <(discover_git_repos)
+
+  if ! $committed; then
+    echo -e "${YELLOW}! No changes to commit for Stage $stage_num${NC}"
   fi
 
-  if git push; then
-    echo -e "${GREEN}✓ Stage $stage_num committed and pushed${NC}"
-    echo "  Commit: $(git rev-parse --short HEAD)"
-    echo "  Message: $commit_msg"
-  else
-    echo -e "${YELLOW}! Git push failed for Stage $stage_num — commit exists locally${NC}"
-    echo "  Run 'git push' manually to sync."
-    # Don't fail the whole epic — the commit is safe locally
+  cd "$PROJECT_DIR"
+}
+
+# Optional post-commit deploy hook
+# If scripts/deploy-hook.sh exists and is executable, run it after each stage commit
+run_deploy_hook() {
+  local stage_num="$1"
+  local hook="$PROJECT_DIR/scripts/deploy-hook.sh"
+  if [ -x "$hook" ]; then
+    echo -e "${BLUE}Running deploy hook for Stage $stage_num...${NC}"
+    if "$hook" "$stage_num"; then
+      echo -e "${GREEN}✓ Deploy hook complete${NC}"
+    else
+      echo -e "${YELLOW}! Deploy hook failed (non-blocking)${NC}"
+    fi
   fi
 }
 
@@ -383,8 +448,23 @@ for stage_num in $(seq 1 "$STAGE_COUNT"); do
 
     echo -e "${BLUE}Running: Slice $((local_idx+1)) — ${SLICE}${NC}"
 
-    if "$SCRIPT_DIR/run-task.sh" "$SLICE"; then
+    if "$SCRIPT_DIR/run-task.sh" --no-commit "$SLICE"; then
       echo -e "${GREEN}✓ Slice $((local_idx+1)) complete${NC}"
+
+      # Orchestrator handles commit (same as parallel stages)
+      if ! commit_stage "$stage_num" "$local_idx"; then
+        echo -e "${RED}✗ Stage $stage_num commit failed${NC}"
+        echo "Changes are in the working directory. Commit manually:"
+        if $IS_MULTI_REPO; then
+          while IFS= read -r repo_dir; do
+            echo "  cd $repo_dir && git add -A && git commit -m 'feat: Stage ${stage_num}' && git push"
+          done < <(discover_git_repos)
+        else
+          echo "  git add -A && git commit -m 'feat: Stage ${stage_num}' && git push"
+        fi
+        exit 1
+      fi
+      run_deploy_hook "$stage_num"
     else
       echo -e "${RED}✗ Slice $((local_idx+1)) failed: $SLICE${NC}"
       echo ""
@@ -420,10 +500,19 @@ for stage_num in $(seq 1 "$STAGE_COUNT"); do
     # Consolidated git commit for all parallel slices in this stage
     if ! commit_stage "$stage_num" "${stage_indices[@]}"; then
       echo -e "${RED}✗ Stage $stage_num commit failed${NC}"
-      echo "Changes are in the working directory. Commit manually with:"
-      echo "  git add -A && git commit -m 'feat: Stage ${stage_num}' && git push"
+      echo "Changes are in the working directory. Commit manually:"
+      if $IS_MULTI_REPO; then
+        while IFS= read -r repo_dir; do
+          echo "  cd $repo_dir && git add -A && git commit -m 'feat: Stage ${stage_num}' && git push"
+        done < <(discover_git_repos)
+      else
+        echo "  git add -A && git commit -m 'feat: Stage ${stage_num}' && git push"
+      fi
       exit 1
     fi
+
+    # Run deploy hook after successful commit
+    run_deploy_hook "$stage_num"
   fi
 
   COMPLETED_STAGES=$((COMPLETED_STAGES+1))
