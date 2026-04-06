@@ -24,7 +24,6 @@ CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_NAME="{{PROJECT_NAME}}"
-LOG_DIR="/tmp/${PROJECT_NAME}-run"
 MAX_PARALLEL="${MAX_PARALLEL:-3}"
 EPIC="$*"
 
@@ -34,7 +33,16 @@ if [ -z "$EPIC" ]; then
   exit 1
 fi
 
+# Epic-scoped log directory — prevents log pollution across runs
+RUN_ID="$(date +%Y%m%d-%H%M%S)"
+LOG_DIR="/tmp/${PROJECT_NAME}-run/${EPIC// /-}-${RUN_ID}"
 mkdir -p "$LOG_DIR"
+
+# Symlink for convenience: /tmp/<project>-run/latest → this run
+ln -sfn "$LOG_DIR" "/tmp/${PROJECT_NAME}-run/latest"
+
+# Export so run-task.sh uses the same scoped directory
+export EPIC_LOG_DIR="$LOG_DIR"
 
 # Colors
 RED='\033[0;31m'

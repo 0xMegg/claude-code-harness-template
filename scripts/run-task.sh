@@ -17,7 +17,7 @@ set -euo pipefail
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT_NAME="{{PROJECT_NAME}}"
-LOG_DIR="/tmp/${PROJECT_NAME}-run"
+LOG_DIR="${EPIC_LOG_DIR:-/tmp/${PROJECT_NAME}-run}"
 
 # Optional: --task-id <id> for parallel execution isolation
 TASK_ID=""
