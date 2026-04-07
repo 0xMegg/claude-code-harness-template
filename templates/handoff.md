@@ -1,8 +1,8 @@
 # Session Handoff
 
-> 이 파일은 **overwrite** 모델이다.
-> 각 Role 전환 시 현재 상태만 남기고, 이전 핸드오프는 `outputs/archive/`로 이동한다.
-> 50줄 이내를 유지한다. Context reset 환경에서 핸드오프는 최소 계약이어야 한다.
+> Overwrite model: each role overwrites with current state only.
+> Planner archives previous handoff to `outputs/archive/` before overwrite. Developer/Reviewer overwrite without archiving.
+> Keep under 50 lines.
 
 ## Current State
 - Task: [Task N — name]
@@ -10,24 +10,29 @@
 - Date: [date]
 
 ## Last Action
-- [가장 최근 Role이 수행한 핵심 결과 1-3줄]
+- [1-3 lines: key result from the most recent role]
+- Verdict: [APPROVE / REQUEST_CHANGES / ITERATE / N/A] <!-- Reviewer only -->
+- Commit: [hash / "none"] <!-- Reviewer only -->
 
 ## Files Changed
 - `[repo/file path]` — [reason]
-  (multi-repo: repo 접두사 사용, e.g., `backend/src/api/auth.ts`)
 
 ## Verification Status
 - Lint: PASS / FAIL
 - Test: PASS / FAIL / N/A
-- Live: PASS / FAIL / N/A
+- Live: PASS / FAIL / N/A / SKIPPED
+
+## Issues Found <!-- Reviewer only -->
+- Critical: [list or "none"]
+- Important: [list or "none"]
 
 ## Next Step
-- [다음 Role이 해야 할 일, 1-2줄]
+- [1-2 lines: what the next role should do]
 
 ## Carry Over
-- [이번 cycle에서 발견되었지만 다음 Task로 미룬 이슈, 없으면 "none"]
+- [Issues deferred to next Task, or "none"]
 
 ## Plan & Review Locations
 - Plan: outputs/plans/task-N-plan.md
 - Verify: outputs/plans/task-N-verify.md
-- Review: outputs/reviews/task-N-review.md (있으면)
+- Review: outputs/reviews/task-N-review.md

@@ -16,7 +16,7 @@ set -euo pipefail
 # ============================================================
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PROJECT_NAME="{{PROJECT_NAME}}"
+PROJECT_NAME="${PROJECT_NAME:-$(basename "$PROJECT_DIR")}"
 LOG_DIR="${EPIC_LOG_DIR:-/tmp/${PROJECT_NAME}-run}"
 
 # Optional: --task-id <id> for parallel execution isolation
@@ -44,6 +44,11 @@ MAX_ITER=1
 if [ "${1:-}" = "--max-iter" ] && [ -n "${2:-}" ]; then
   MAX_ITER="$2"
   shift 2
+fi
+
+if ! [[ "$MAX_ITER" =~ ^[0-9]+$ ]] || [ "$MAX_ITER" -lt 1 ]; then
+  echo "Error: --max-iter must be a positive integer (got: $MAX_ITER)"
+  exit 1
 fi
 
 TASK="$*"

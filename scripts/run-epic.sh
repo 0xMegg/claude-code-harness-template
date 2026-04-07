@@ -23,7 +23,7 @@ set -euo pipefail
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_NAME="{{PROJECT_NAME}}"
+PROJECT_NAME="${PROJECT_NAME:-$(basename "$PROJECT_DIR")}"
 MAX_PARALLEL="${MAX_PARALLEL:-3}"
 EPIC="$*"
 

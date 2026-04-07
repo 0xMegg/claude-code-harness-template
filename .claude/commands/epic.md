@@ -13,7 +13,7 @@ Use `run_in_background: true`.
 2. Immediately after, run the status monitor in the background (single command, one approval):
 
 ```bash
-L=/tmp/{{PROJECT_NAME}}-run/latest; while true; do sleep 45; elapsed=$(( $(date +%s) - $(stat -f%m "$L/epic-plan.log" 2>/dev/null || date +%s) )); min=$((elapsed/60)); sec=$((elapsed%60)); status="⏱ ${min}m${sec}s"; for d in "$L"/task-slice-*/; do [ -d "$d" ] || continue; s=$(basename "$d"); p="plan"; [ -f "$d/stdout.log" ] && { grep -q "PHASE 3" "$d/stdout.log" 2>/dev/null && p="review" || { grep -q "PHASE 2" "$d/stdout.log" 2>/dev/null && p="develop"; }; }; v=""; grep -qi "APPROVE" "$d/stdout.log" 2>/dev/null && v="✓"; status="$status | $s:$p$v"; done; echo "$status"; done
+L=/tmp/{{PROJECT_NAME}}-run/latest; while true; do sleep 45; elapsed=$(( $(date +%s) - $(date -r "$L/epic-plan.log" 2>/dev/null || date +%s) )); min=$((elapsed/60)); sec=$((elapsed%60)); status="⏱ ${min}m${sec}s"; for d in "$L"/task-slice-*/; do [ -d "$d" ] || continue; s=$(basename "$d"); p="plan"; [ -f "$d/stdout.log" ] && { grep -q "PHASE 3" "$d/stdout.log" 2>/dev/null && p="review" || { grep -q "PHASE 2" "$d/stdout.log" 2>/dev/null && p="develop"; }; }; v=""; grep -qi "APPROVE" "$d/stdout.log" 2>/dev/null && v="✓"; status="$status | $s:$p$v"; done; echo "$status"; done
 ```
 Use `run_in_background: true`.
 

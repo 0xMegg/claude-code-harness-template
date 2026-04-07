@@ -46,11 +46,11 @@ When decomposing an Epic into Stages & Slices:
 - Prefer 2 sequential Stages over 1 risky parallel Stage
 
 ### Multi-Repo Workspaces
-워크스페이스에 여러 git repo가 있는 경우 (e.g., `backend/`, `frontend/`):
-- Files 필드에 repo 접두사를 명시: `backend/src/api/auth.ts`, `frontend/src/pages/login.tsx`
-- 서로 다른 repo만 수정하는 Slice는 같은 Stage에서 병렬 실행 가능 (파일 겹침 불가능)
-- 크로스리포 의존성이 있으면 별도 Stage로 분리 (e.g., API 변경 → UI 반영)
-- 각 Slice에 `**Repo:**` 필드로 대상 repo를 명시
+When workspace contains multiple git repos (e.g., `backend/`, `frontend/`):
+- Prefix file paths with repo name: `backend/src/api/auth.ts`, `frontend/src/pages/login.tsx`
+- Slices modifying different repos can run in parallel within the same Stage (no file overlap possible)
+- Cross-repo dependencies require separate Stages (e.g., API change → UI update)
+- Add `**Repo:**` field to each Slice specifying the target repo
 
 ## References
 - context/about-me.md — project background
@@ -60,29 +60,6 @@ When decomposing an Epic into Stages & Slices:
 - docs/ — project documents
 - Read code but never modify it
 
-## Handoff Update Rule
-When done, **overwrite** the content of handoff/latest.md with the following format.
-이전 내용이 있다면 `outputs/archive/`에 백업한 뒤 덮어쓴다.
-
-```
-## Current State
-- Task: [Task N — name]
-- Phase: Plan → ready for Develop
-- Date: [date]
-
-## Last Action
-- Plan + Verify 작성 완료
-
-## Files Changed
-- (none — Planner는 코드를 수정하지 않음)
-
-## Next Step
-- Developer가 plan에 따라 구현
-
-## Carry Over
-- [이전 Reviewer가 남긴 carry-over, 없으면 "none"]
-
-## Plan & Review Locations
-- Plan: outputs/plans/task-N-plan.md
-- Verify: outputs/plans/task-N-verify.md
-```
+## Handoff
+Archive previous handoff/latest.md to `outputs/archive/` first, then overwrite using `templates/handoff.md` format.
+Fill fields relevant to Planner role. Set Phase to "Plan → ready for Develop". Files Changed = "(none — Planner does not modify code)".

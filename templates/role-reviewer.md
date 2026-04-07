@@ -13,7 +13,8 @@ You verify the Developer's work. You do NOT modify code directly.
 6. **Commit (LAST step — after all files are written):**
    - APPROVE → detect git repo(s) → stage all changed files in each repo → commit + push each
    - REQUEST_CHANGES → do NOT commit/push, return to Developer
-7. **Log (APPROVE only):** Append one line to `/Users/mero/Dev/13.claude/logs/YYYY-MM-DD.md`
+7. **Evaluate (APPROVE only):** Write `outputs/evaluations/task-N-eval.md` using templates/evaluation.md
+8. **Log (APPROVE only):** Append one line to `$HOME/.claude/logs/YYYY-MM-DD.md`
    - Format: `- [HH:MM] **{project_name}** Task N — short summary`
    - Project name: extracted from current working directory name
    - Create the file if it doesn't exist yet
@@ -45,23 +46,22 @@ You verify the Developer's work. You do NOT modify code directly.
 - [ ] No hardcoded values (secrets, URLs, etc.)
 
 ### 3. Architecture Check
-- [ ] {{ARCHITECTURE_CHECK_1}} (e.g., Repository pattern followed)
-- [ ] {{ARCHITECTURE_CHECK_2}} (e.g., Routing solution is consistent)
-- [ ] {{ARCHITECTURE_CHECK_3}} (e.g., Design system tokens used)
+- [ ] Follows project architecture (see CLAUDE.md § Architecture)
+- [ ] {{CUSTOM_CHECKS}}
 
 ### 4. Security Check
-- [ ] No .env, API keys, or tokens in code
-- [ ] {{SECURITY_CHECK}} (e.g., no RLS bypass, no XSS vulnerabilities)
+- [ ] No secrets in code (.env, API keys, tokens)
+- [ ] OWASP top 10 basics (injection, XSS if applicable)
 
-### 5. Live Verification (UI/API 태스크 시)
-정적 코드 리뷰만으로는 UI/API 태스크에 불충분하다.
-- [ ] 개발 서버 실행: `{{DEV_CMD}}`
-- [ ] 영향받는 라우트/엔드포인트 방문
-- [ ] Plan의 Happy path 실행 → 정상 동작 확인
-- [ ] 엣지 케이스 최소 2건 (빈 입력, 권한 없음, 잘못된 형식 등)
-- [ ] 각 항목 pass/fail → review 파일에 기록
+### 5. Live Verification (UI/API tasks)
+Static code review is insufficient for UI/API tasks.
+- [ ] Start dev server: `{{DEV_CMD}}`
+- [ ] Visit affected routes/endpoints
+- [ ] Execute happy path from plan → confirm correct behavior
+- [ ] Test at least 2 edge cases (empty input, unauthorized, malformed data, etc.)
+- [ ] Record each item pass/fail in review file
 
-UI/API 변경이 아닌 순수 로직/리팩터링 태스크는 이 단계를 건너뛸 수 있다.
+Skip this step for pure logic/refactoring tasks with no UI/API changes.
 
 ## Anti-Dismissal Rule
 이슈를 발견했으면 스스로 무효화하지 마라.
@@ -86,6 +86,10 @@ UI/API 변경이 아닌 순수 로직/리팩터링 태스크는 이 단계를 �
 - Include handoff/latest.md + review file in the same commit (in the repo where they reside)
 - Never commit/push on REQUEST_CHANGES
 
+### Parallel Execution Override
+When `--no-commit` instruction is present in the prompt, skip git operations entirely.
+The orchestrator (run-epic.sh) calls commit_stage() for consolidated commits after all parallel slices complete.
+
 ## Multi-Repo Commit Rules
 워크스페이스 루트에 `.git/`이 없고 하위 디렉토리가 각각 git repo인 경우:
 1. 하위 디렉토리 중 `.git/`이 있는 repo를 탐색
@@ -96,35 +100,6 @@ UI/API 변경이 아닌 순수 로직/리팩터링 태스크는 이 단계를 �
 
 단일 repo 워크스페이스 (`.git/`이 루트에 있음): 기존과 동일하게 루트에서 커밋.
 
-## Handoff Update Rule
-When done, **overwrite** the content of handoff/latest.md with the following format.
-이전 내용은 유지하지 않는다 (context reset 환경에서 최소 계약만 남긴다).
-
-```
-## Current State
-- Task: [Task N — name]
-- Phase: Review → [APPROVE / REQUEST_CHANGES / ITERATE]
-- Date: [date]
-
-## Last Action
-- Verdict: [APPROVE / REQUEST_CHANGES / ITERATE]
-- Commit: [hash on APPROVE / "none"]
-- Live Verification: [PASS / FAIL / SKIPPED]
-
-## Issues Found
-- Critical: [list, 없으면 "none"]
-- Important: [list, 없으면 "none"]
-
-## Next Step
-- APPROVE → next Task in queue
-- REQUEST_CHANGES → Developer fixes, then re-review
-- ITERATE → Developer refines per targets below, then re-review
-
-## Carry Over
-- [다음 Task로 미룬 이슈, 없으면 "none"]
-
-## Plan & Review Locations
-- Plan: outputs/plans/task-N-plan.md
-- Verify: outputs/plans/task-N-verify.md
-- Review: outputs/reviews/task-N-review.md
-```
+## Handoff
+Overwrite handoff/latest.md using `templates/handoff.md` format. Fill all fields including Reviewer-only sections (Verdict, Commit, Issues Found).
+Set Phase to "Review → [APPROVE / REQUEST_CHANGES / ITERATE]".

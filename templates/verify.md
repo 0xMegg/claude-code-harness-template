@@ -4,57 +4,56 @@
 [Task N] — [Task name]
 
 ## Completion Criteria
-모델과 사람이 같은 끝점을 보게 만드는 좌표.
-- [ ] [기능적 완료 기준 1]
-- [ ] [기능적 완료 기준 2]
+Coordinates so both model and human see the same finish line.
+- [ ] [Functional completion criterion 1]
+- [ ] [Functional completion criterion 2]
 
 ## Automated Checks
-순서대로 실행. 이전 단계 실패 시 다음 단계 진행하지 않음.
+Run in order. Stop on first failure.
 1. Lint/Analyze: `{{LINT_CMD}}`
-2. Type check: `{{TYPECHECK_CMD}}`
-3. Targeted test: `{{TEST_SINGLE_CMD}}` (변경 영역만)
+2. Type check: `{{TYPECHECK_CMD}}` <!-- optional: remove if project has no type checker -->
+3. Targeted test: `{{TEST_SINGLE_CMD}}` (changed area only)
 4. Full test: `{{TEST_CMD}}`
 5. Build: `{{BUILD_CMD}}`
 
-## Live Verification (UI/API 태스크)
-Reviewer가 실제 실행 중인 앱에서 직접 검증하는 항목.
-정적 코드 리뷰만으로는 발견하지 못하는 런타임 버그를 잡기 위함.
-1. 개발 서버 실행: `{{DEV_CMD}}`
-   - Multi-repo: 해당 Slice가 수정한 repo의 서버를 실행 (e.g., backend `{{BACKEND_DEV_CMD}}`, frontend `{{FRONTEND_DEV_CMD}}`)
+## Live Verification (UI/API tasks)
+Reviewer verifies against a running app to catch runtime bugs invisible in static review.
+1. Start dev server: `{{DEV_CMD}}`
+   <!-- Multi-repo: start the repo's own server, e.g., backend {{BACKEND_DEV_CMD}}, frontend {{FRONTEND_DEV_CMD}} -->
 2. Happy path:
-   - [ ] [정상 시나리오 — e.g., "유효한 이메일/비밀번호로 가입 → 메인 화면 이동"]
+   - [ ] [Normal scenario — e.g., "valid email/password signup → redirects to main"]
 3. Edge cases:
-   - [ ] [엣지 1 — e.g., "빈 폼 제출 시 에러 메시지 표시"]
-   - [ ] [엣지 2 — e.g., "이미 존재하는 이메일로 가입 시도"]
-4. API 엔드포인트 (해당 시):
-   - [ ] [curl/Postman으로 정상 요청 확인]
-   - [ ] [잘못된 입력으로 에러 응답 확인]
+   - [ ] [Edge 1 — e.g., "empty form submit shows error"]
+   - [ ] [Edge 2 — e.g., "duplicate email shows conflict"]
+4. API endpoints (if applicable):
+   - [ ] [curl/Postman: valid request returns expected response]
+   - [ ] [Invalid input returns proper error]
 
-순수 로직/리팩터링 태스크는 이 섹션을 "N/A — 순수 로직 변경"으로 표기.
+For pure logic/refactoring tasks, mark this section "N/A — pure logic change".
 
-## Quality Criteria (디자인/크리에이티브 태스크)
-기능적으로 동작하더라도 품질이 미달이면 ITERATE verdict.
-해당하지 않는 태스크는 이 섹션을 생략.
+## Quality Criteria (design/creative tasks)
+Even if functional, subpar quality → ITERATE verdict.
+Skip this section for non-design tasks.
 
-1-10점, 가중치:
-- Design Quality (×3): 시각 위계, 간격, 타이포그래피 일관성
-- Originality (×3): 제네릭/템플릿 패턴 회피, 고유한 캐릭터
-- Craft (×2): 디테일 폴리시, 트랜지션, 반응성
-- Functionality (×2): 정확성, 엣지 케이스 처리
+1-10 scale, weighted:
+- Design Quality (×3): visual hierarchy, spacing, typography consistency
+- Originality (×3): avoids generic/template patterns, unique character
+- Craft (×2): detail polish, transitions, responsiveness
+- Functionality (×2): correctness, edge case handling
 
-가중 합계 70/100 미만 → ITERATE (구체적 개선 타겟 필수)
+Weighted sum below 70/100 → ITERATE (must specify improvement targets)
 
 ## Constraints
-- 테스트 코드를 통과시키기 위해 테스트를 수정하지 말 것
-- 다음 파일은 수정 금지: [보호 파일 목록]
-- 화면 검증까지 끝나야 종료할 것
+- Do NOT modify tests to make them pass
+- Do NOT touch protected files: [list]
+- Task is not complete until live verification passes
 
 ## Rollback Point
-- Revert 대상: [특정 파일 또는 git revert 전략]
-- 유지 가능: [롤백해도 남겨도 되는 파일]
+- Revert target: [specific files or git revert strategy]
+- Safe to keep: [files that survive rollback]
 
 ## Report
-검증 완료 후 아래 형식으로 기록:
+After verification, record:
 - What changed:
 - What passed:
 - What failed:

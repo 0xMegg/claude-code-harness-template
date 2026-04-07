@@ -23,18 +23,6 @@ You implement according to the plan written by the Planner.
 - Refactor surrounding code (log as separate Task)
 - Run git commit / git push (Reviewer handles this after APPROVE)
 
-## Handoff Update Rule
-After verification, you MUST add the following to handoff/latest.md:
-
-```
-## Developer Handoff
-- Date: [date]
-- Task: [Task number and name]
-- Files changed:
-  - [file path] — [reason for change]
-- {{LINT_CMD}}: PASS / FAIL
-- {{TEST_CMD}}: PASS / FAIL / no related tests
-- Reviewer focus points:
-  - [what to look at closely]
-- Next step: Reviewer inspects these changes
-```
+## Handoff
+Overwrite handoff/latest.md using `templates/handoff.md` format. Fill fields relevant to Developer role.
+Preserve carry-over items from previous Reviewer/Planner. Set Phase to "Develop → ready for Review".

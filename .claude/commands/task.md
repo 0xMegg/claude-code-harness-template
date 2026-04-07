@@ -11,7 +11,7 @@ Run the following command as a **background task** using `run_in_background: tru
 Tell the user the task is running, then **monitor progress every 60 seconds** with a single status check command:
 
 ```bash
-echo "⏱ $(( $(date +%s) - $(stat -f%m /tmp/{{PROJECT_NAME}}-run/plan.log 2>/dev/null || date +%s) ))s elapsed"; phase="plan"; [ -f /tmp/{{PROJECT_NAME}}-run/review.log ] 2>/dev/null && phase="review" || { [ -f /tmp/{{PROJECT_NAME}}-run/develop.log ] 2>/dev/null && phase="develop"; }; echo "  phase: $phase"
+echo "⏱ $(( $(date +%s) - $(date -r /tmp/{{PROJECT_NAME}}-run/plan.log 2>/dev/null || date +%s) ))s elapsed"; phase="plan"; [ -f /tmp/{{PROJECT_NAME}}-run/review.log ] 2>/dev/null && phase="review" || { [ -f /tmp/{{PROJECT_NAME}}-run/develop.log ] 2>/dev/null && phase="develop"; }; echo "  phase: $phase"
 ```
 
 **Rules:**
