@@ -107,25 +107,3 @@ Compaction은 "context anxiety"를 유발하여 모델이 작업을 조기 마�
 
 5가지 지표를 계속 비교:
 - 성공률, 사람 수정량, 시간, 토큰/비용, 실패 유형
-
-## Self-Improvement Loop (Harvest Module)
-평가 루프의 확장판. 외부 신호를 수집하고, 점수화하고, 실험적으로 적용하고, 측정한다.
-
-### 파이프라인 (6 Phase)
-0. 실행 가드 (lockfile + cooldown)
-1. 수집 (WebFetch, WebSearch, 수동 입력, 내부 피드백)
-2. 분석 (5축 fitness filter: 자동화, 마찰제거, HARD전환, 토큰효율, 측정가능성)
-3. 기준 측정 (harness-report.sh)
-3.5 이중 검증 (임시 적용 → 재측정 → 유지/폐기)
-4. 적용 판단 (harvest-policy.md 기준: auto vs 승인 필요)
-5. 보고 (harvest/reports/)
-
-### 실행 방법
-- 수동: `/harvest` 커맨드 또는 `bash scripts/run-harvest.sh`
-- 부분: `/harvest scan`, `/harvest add <URL>`, `/harvest judge`, `/harvest status`
-
-### 핵심 원칙
-- **Double-Gating**: 철학 필터(SOFT) + 실측 검증(HARD) 둘 다 통과해야 적용
-- **롤백 보장**: `git stash`/`git checkout -- .` 사용 (`git reset --hard` 금지)
-- **점진적 진화**: 한 번에 큰 변경 아닌, 작은 규칙/스킬 단위로 적용
-- **측정 기반**: harness-report 점수가 하락하면 자동 폐기/revert

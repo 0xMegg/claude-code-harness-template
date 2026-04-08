@@ -31,11 +31,5 @@
 - [ ] 검증 누락 (수동 확인 빠짐)
 - [ ] 기타: [설명]
 
-### 6. Harvest Impact (수확 영향) — optional
-- 이번 Task에 harvest-applied 규칙이 적용되었는가: YES / NO
-- 적용된 규칙: [list or "none"]
-- 측정된 영향: harness-report Δ [+/-N or "N/A"]
-
 ## Lessons Learned
 - [이번 작업에서 배운 점 — gotchas.md나 rules에 반영할 것이 있으면 여기 기록]
-- [harvest pipeline으로 자동 수집/적용할만한 패턴이 있으면 여기 기록]
