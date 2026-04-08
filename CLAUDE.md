@@ -1,36 +1,67 @@
 # Project Contract
 
 ## Project
-- Name: Claude Code Harness
-- Type: Development Tooling / Meta-Project
-- Stack: Bash, Markdown, Claude Code Skills
+- Name: {{PROJECT_NAME}}
+- Type: {{PROJECT_TYPE}}
+- Stack: {{TECH_STACK}}
 
 ## Build & Test Commands
-- Build template: `bash scripts/build-template.sh`
-- Harness report: `bash scripts/harness-report.sh`
-- Run harvest: `bash scripts/run-harvest.sh`
-- Lint: `shellcheck scripts/*.sh`
+- Install: `{{INSTALL_CMD}}`
+- Dev/Run: `{{DEV_CMD}}`
+- Build: `{{BUILD_CMD}}`
+- Test all: `{{TEST_CMD}}`
+- Test single: `{{TEST_SINGLE_CMD}}`
+- Lint/Analyze: `{{LINT_CMD}}`
+- Format: `{{FORMAT_CMD}}`
+
+<!-- Multi-Repo (uncomment if workspace has multiple git repos)
+## Multi-Repo Structure
+This workspace coordinates multiple independent repositories:
+- `{{REPO_1}}/` — {{REPO_1_DESCRIPTION}}
+- `{{REPO_2}}/` — {{REPO_2_DESCRIPTION}}
+
+### {{REPO_1}} Commands
+- Install: `cd {{REPO_1}} && {{REPO_1_INSTALL}}`
+- Dev/Run: `cd {{REPO_1}} && {{REPO_1_DEV}}`
+- Test: `cd {{REPO_1}} && {{REPO_1_TEST}}`
+- Lint: `cd {{REPO_1}} && {{REPO_1_LINT}}`
+
+### {{REPO_2}} Commands
+- Install: `cd {{REPO_2}} && {{REPO_2_INSTALL}}`
+- Dev/Run: `cd {{REPO_2}} && {{REPO_2_DEV}}`
+- Lint: `cd {{REPO_2}} && {{REPO_2_LINT}}`
+
+## Multi-Repo Discipline
+- Preserve repository boundaries — each slice targets one repo unless explicitly cross-repo
+- Do not assume a change in one repo requires a change in another
+- Keep integration contracts explicit between repos
+-->
 
 ## Folder Boundaries
-- Source code (template source): `src/`
-- Build output: `outputs/template/`
-- Harvest data: `harvest/`
-- Do NOT modify: `.env`, `outputs/template/` (auto-generated), `harvest/.seen.json`
+- Source code: `{{SRC_DIR}}`
+- Tests: `{{TEST_DIR}}`
+- Do NOT modify: `.env`, `{{BUILD_OUTPUT}}/`, `{{LOCK_FILE}}`, `{{PROTECTED_FILES}}`
 
 ## Architecture
-- Meta-project: 하네스를 하네스로 관리하는 자기참조 구조
-- src/ = 배포용 템플릿 소스 ({{플레이스홀더}} 포함)
-- outputs/template/ = src/에서 빌드된 결과물 (사용자에게 배포)
-- harvest/ = self-improvement pipeline 데이터
-- 7-Element Harness: Permissions, Validation, Execution Mode, State, Decision Trace, External Integration, Self-Improvement Loop
+- {{ARCHITECTURE_PATTERN}}
+- State management: {{STATE_MANAGEMENT}}
+- Routing: {{ROUTING}}
+- Data access: {{DATA_ACCESS_PATTERN}}
+
+## Coding Conventions
+- Language: {{LANGUAGE}}
+- Naming: {{NAMING_CONVENTION}}
+- File naming: {{FILE_NAMING}}
+- Imports: {{IMPORT_STYLE}}
+- Error handling: {{ERROR_HANDLING}}
 
 ## Work Protocol
 1. Read the relevant code before modifying
 2. Keep changes feature-local first
 3. Run lint/analyze after every change
-4. Make the smallest change that completes the task
-5. Update `handoff/latest.md` with what changed and what's next
-6. After modifying src/ or root harness files, run `bash scripts/build-template.sh`
+4. Run tests if they exist for the changed area
+5. Make the smallest change that completes the task
+6. Update `handoff/latest.md` with what changed and what's next
 
 ## Restrictions
 - Never commit secrets, API keys, or .env files
@@ -38,25 +69,16 @@
 - Never force push to main/master
 - Never add dependencies without stating the reason
 - Never do repo-wide refactor without explicit request
-- Never modify outputs/template/ directly — always edit src/ and rebuild
 
 ## References
 - `context/` — project background, working rules, decision log
-- `context/about-me.md` — project description
-- `context/working-rules.md` — 3-Role workflow + self-improvement loop
-- `context/harvest-policy.md` — harvest auto-apply vs manual approval rules
-- `handoff/latest.md` — current state and task queue
-- `docs/harvest-guide.md` — self-improvement pipeline explanation
-- `src/` — template source (edit here, build to outputs/template/)
-
-## Self-Improvement (Harvest Module)
-- `harvest/config.json` — 수집 소스, 임계값, 스케줄 설정
-- `context/harvest-policy.md` — 자동 적용 vs 수동 승인 정책
-- `/harvest` — 전체 파이프라인 실행
-- `/harvest scan` — 수집만
-- `/harvest add <URL/설명>` — 수동 입력
-- `/harvest judge` — baseline 측정 + autoresearch
-- `/harvest status` — 현황 확인
+- `context/access-policy.md` — AI tool access policy (allowed / approval / blocked)
+- `context/mcp-policy.md` — MCP & external integration policy
+- `handoff/latest.md` — current state and task queue (read at every session start)
+- `docs/plugin-guide.md` — plugin structure, security checklist, deployment strategy
+- `docs/epic-guide.md` — epic decomposition, parallel stage execution, failure recovery
+- `templates/evaluation.md` — task evaluation metrics (fill after each task)
+- `{{SCHEMA_FILE}}` — data schema (source of truth), if applicable
 
 ## 3-Role Workflow
 - `/plan` — Planner: read-only, writes plans to `outputs/plans/`
