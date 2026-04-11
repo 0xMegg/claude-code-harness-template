@@ -2,7 +2,7 @@
 # run-epic.sh — Epic decomposition + automatic Slice execution
 #
 # Usage:
-#   ./scripts/run-epic.sh "Epic 1 — 사용자 인증 시스템"
+#   ./scripts/run-epic.sh "Epic 1 — User authentication system"
 #
 # Flow:
 #   1. /plan Epic N → generates epic plan with Slice list
@@ -25,11 +25,33 @@ PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_NAME="${PROJECT_NAME:-$(basename "$PROJECT_DIR")}"
 MAX_PARALLEL="${MAX_PARALLEL:-3}"
+
+# ============================================================
+# Argument parsing (flags first, then epic description)
+# ============================================================
+DRY_RUN=false
+while [ $# -gt 0 ]; do
+  case "${1:-}" in
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
 EPIC="$*"
 
 if [ -z "$EPIC" ]; then
-  echo "Usage: $0 <epic description>"
-  echo "Example: $0 Epic 1 — 사용자 인증 시스템"
+  echo "Usage: $0 [--dry-run] <epic description>"
+  echo "Example: $0 Epic 1 — User authentication system"
+  echo "Example: $0 --dry-run Epic 1 — Smoke test (no tokens spent)"
   exit 1
 fi
 
@@ -44,6 +66,54 @@ ln -sfn "$LOG_DIR" "/tmp/${PROJECT_NAME}-run/latest"
 # Export so run-task.sh uses the same scoped directory
 export EPIC_LOG_DIR="$LOG_DIR"
 
+# ============================================================
+# Epic branch isolation — create epic/{RUN_ID} branch off main
+# (skipped for dry-run, non-git, or HARVEST_ALLOW_MAIN=1)
+# ============================================================
+EPIC_BRANCH=""
+EPIC_ORIGINAL_BRANCH=""
+
+setup_epic_branch() {
+  if [ "$DRY_RUN" = true ]; then return 0; fi
+  if [ "${HARVEST_ALLOW_MAIN:-0}" = "1" ]; then return 0; fi
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then return 0; fi
+
+  EPIC_ORIGINAL_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+  case "$EPIC_ORIGINAL_BRANCH" in
+    main|master) ;;
+    *) return 0 ;;   # already on a non-main branch
+  esac
+
+  if [ -n "$(git status --porcelain)" ]; then
+    echo "ERROR: working tree dirty on $EPIC_ORIGINAL_BRANCH — commit/stash first or set HARVEST_ALLOW_MAIN=1" >&2
+    exit 1
+  fi
+
+  EPIC_BRANCH="epic/${RUN_ID}"
+  git checkout -b "$EPIC_BRANCH" >/dev/null 2>&1
+  echo "[epic-branch] ${EPIC_ORIGINAL_BRANCH} → ${EPIC_BRANCH}"
+}
+
+finalize_epic_branch() {
+  [ -z "$EPIC_BRANCH" ] && return 0
+  [ "$DRY_RUN" = true ] && return 0
+
+  git checkout "$EPIC_ORIGINAL_BRANCH" >/dev/null 2>&1 || {
+    echo "WARN: cannot return to $EPIC_ORIGINAL_BRANCH — ${EPIC_BRANCH} preserved" >&2
+    return 0
+  }
+  if git merge --ff-only "$EPIC_BRANCH" >/dev/null 2>&1; then
+    echo "[epic-branch] merged ${EPIC_BRANCH} → ${EPIC_ORIGINAL_BRANCH} (ff-only)"
+    git push 2>/dev/null && echo "[epic-branch] pushed ${EPIC_ORIGINAL_BRANCH}" || echo "[epic-branch] push skipped or failed — local merge kept"
+    git branch -d "$EPIC_BRANCH" >/dev/null 2>&1 || true
+  else
+    echo "WARN: ff-only merge failed — leave ${EPIC_BRANCH} for manual review" >&2
+    git checkout "$EPIC_BRANCH" >/dev/null 2>&1 || true
+  fi
+}
+
+setup_epic_branch
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -57,7 +127,61 @@ log_phase() {
   echo -e "${CYAN}════════════════════════════════════════${NC}"
   echo -e "${CYAN}  $1${NC}"
   echo -e "${CYAN}════════════════════════════════════════${NC}"
+  print_epic_status_line
   echo ""
+}
+
+# ============================================================
+# Epic status file — writes KEY=VALUE lines to $EPIC_STATUS_FILE.
+# Matches the format used by run-task.sh so external monitors
+# (epic.md, task.md) can read both files with the same parser.
+# ============================================================
+EPIC_STATUS_FILE="${LOG_DIR}/epic-status"
+
+_quote_val() {
+  # Escape a value for safe `source` in bash 3.2+/zsh.
+  local v="$1"
+  local repl="'\\''"
+  local escaped="${v//\'/$repl}"
+  printf "'%s'" "$escaped"
+}
+
+write_epic_status() {
+  local tmp="${EPIC_STATUS_FILE}.tmp.$$"
+  local pair key val
+
+  if [ -f "$EPIC_STATUS_FILE" ]; then
+    cp "$EPIC_STATUS_FILE" "$tmp"
+  else
+    : > "$tmp"
+  fi
+
+  for pair in "$@"; do
+    key="${pair%%=*}"
+    val="${pair#*=}"
+    grep -v "^${key}=" "$tmp" > "${tmp}.new" 2>/dev/null || true
+    mv "${tmp}.new" "$tmp"
+    echo "${key}=$(_quote_val "$val")" >> "$tmp"
+  done
+
+  grep -v "^UPDATED_EPOCH=" "$tmp" > "${tmp}.new" 2>/dev/null || true
+  mv "${tmp}.new" "$tmp"
+  echo "UPDATED_EPOCH=$(date +%s)" >> "$tmp"
+
+  mv -f "$tmp" "$EPIC_STATUS_FILE"
+}
+
+print_epic_status_line() {
+  [ -f "$EPIC_STATUS_FILE" ] || return 0
+  # shellcheck disable=SC1090
+  ( source "$EPIC_STATUS_FILE"
+    local now
+    now=$(date +%s)
+    local elapsed=$(( now - ${START_EPOCH:-$now} ))
+    local mm=$((elapsed/60))
+    local ss=$((elapsed%60))
+    echo -e "  ${CYAN}🎯 ${EPIC_NAME:-?} | Stage ${STAGE:-?}/${STAGE_TOTAL:-?} | Tasks: ${TASK_TOTAL:-?} | ⏱ ${mm}m${ss}s${NC}"
+  )
 }
 
 # ============================================================
@@ -101,12 +225,27 @@ fi
 
 cd "$PROJECT_DIR"
 
+if [ "$DRY_RUN" = true ]; then
+  echo -e "${YELLOW}════════════════════════════════════════${NC}"
+  echo -e "${YELLOW}  [DRY-RUN] No claude -p calls will be made${NC}"
+  echo -e "${YELLOW}════════════════════════════════════════${NC}"
+fi
+
 # ============================================================
 # Phase 0: Epic Decomposition (skip if plan already exists)
 # ============================================================
 EPIC_PLAN=""
 if [[ -n "${EPIC_NUM:-}" ]]; then
   EPIC_PLAN=$(find "$PROJECT_DIR/outputs/plans" -name "epic-${EPIC_NUM}*plan*.md" 2>/dev/null | sort | tail -1)
+fi
+
+# Dry-run: fall back to any epic plan file in outputs/plans if no EPIC_NUM match
+if [ "$DRY_RUN" = true ] && [ -z "$EPIC_PLAN" ]; then
+  EPIC_PLAN=$(find "$PROJECT_DIR/outputs/plans" -name "epic*plan*.md" 2>/dev/null | sort | tail -1)
+  if [ -z "$EPIC_PLAN" ]; then
+    echo -e "${RED}✗ [DRY-RUN] Requires a pre-existing epic plan in outputs/plans/epic*plan*.md${NC}"
+    exit 1
+  fi
 fi
 
 if [ -n "$EPIC_PLAN" ]; then
@@ -148,11 +287,14 @@ if grep -qiE "^#{2,3}\s+Stage\s+[0-9]" "$EPIC_PLAN" 2>/dev/null; then
   HAS_STAGES=true
 fi
 
-# Arrays: SLICES[i] = description, SLICE_STAGE[i] = stage number
+# Arrays: SLICES[i] = description, SLICE_STAGE[i] = stage number,
+# SLICE_FILES[i] = comma-separated target files (for overlap gate)
 SLICES=()
 SLICE_STAGE=()
+SLICE_FILES=()
 CURRENT_STAGE=1
 STAGE_COUNT=1
+LAST_SLICE_IDX=-1
 
 while IFS= read -r line; do
   # Detect Stage headings: ## Stage N or ### Stage N
@@ -165,7 +307,7 @@ while IFS= read -r line; do
   fi
 
   # Detect Slice/Task lines (existing pattern)
-  if echo "$line" | grep -qiE "^[[:space:]]*[-*|#0-9].*\b(Task|Slice|태스크|슬라이스)\s+[0-9]"; then
+  if echo "$line" | grep -qiE "^[[:space:]]*[-*|#0-9].*\b(Task|Slice)\s+[0-9]"; then
     SLICE_DESC=$(echo "$line" | sed -E '
       s/^[[:space:]]*[-*|]+[[:space:]]*//;
       s/\|[[:space:]]*$//;
@@ -175,6 +317,8 @@ while IFS= read -r line; do
     ')
     if [ -n "$SLICE_DESC" ]; then
       SLICES+=("$SLICE_DESC")
+      SLICE_FILES+=("")
+      LAST_SLICE_IDX=$(( ${#SLICES[@]} - 1 ))
       if $HAS_STAGES; then
         SLICE_STAGE+=("$CURRENT_STAGE")
       else
@@ -183,6 +327,13 @@ while IFS= read -r line; do
         STAGE_COUNT=${#SLICES[@]}
       fi
     fi
+    continue
+  fi
+
+  # Detect "- **Files:** a.md, b.md" lines under the most recent slice
+  if [ "$LAST_SLICE_IDX" -ge 0 ] \
+     && [[ "$line" =~ ^[[:space:]]*-[[:space:]]*\*\*[Ff]iles:\*\*[[:space:]]*(.+)$ ]]; then
+    SLICE_FILES[LAST_SLICE_IDX]="${BASH_REMATCH[1]}"
   fi
 done < "$EPIC_PLAN"
 
@@ -193,6 +344,22 @@ if [ ${#SLICES[@]} -eq 0 ]; then
 fi
 
 TOTAL=${#SLICES[@]}
+
+# ============================================================
+# Initialize epic status file (after slice parsing so we know TOTAL/STAGE_COUNT)
+# ============================================================
+write_epic_status \
+  "EPIC_NAME=${EPIC}" \
+  "STAGE=0" \
+  "STAGE_TOTAL=${STAGE_COUNT}" \
+  "TASK_TOTAL=${TOTAL}" \
+  "COMPLETED_STAGES=0" \
+  "START_EPOCH=$(date +%s)" \
+  "PID=$$"
+
+# Export so run-task.sh can pick up epic context for its own status file
+export EPIC_NAME="${EPIC}"
+export TASK_TOTAL="${TOTAL}"
 
 # ============================================================
 # Display parsed structure
@@ -223,6 +390,105 @@ echo ""
 # Parallel execution helpers
 # ============================================================
 
+# Overlap gate: detect target_files shared by 2+ slices in the same stage.
+# Exits 1 (through caller) if conflicts found. Empty SLICE_FILES entries skipped.
+check_slice_overlap() {
+  local stage_num="$1"
+  shift
+  local indices=("$@")
+
+  local tmpfile
+  tmpfile=$(mktemp -t harvest-overlap.XXXXXX)
+  local has_data=0
+
+  for idx in "${indices[@]}"; do
+    local files="${SLICE_FILES[$idx]:-}"
+    [ -z "$files" ] && continue
+    has_data=1
+    # Strip markdown backticks/brackets, split on comma, trim
+    echo "$files" \
+      | sed 's/`//g; s/\[//g; s/\]//g' \
+      | tr ',' '\n' \
+      | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' \
+      | sed '/^$/d' \
+      | while IFS= read -r f; do
+          echo "${idx}|${f}"
+        done >> "$tmpfile"
+  done
+
+  if [ "$has_data" -eq 0 ]; then
+    # No file lists parsed — rely on human discipline (backward compatible)
+    rm -f "$tmpfile"
+    return 0
+  fi
+
+  local duplicates
+  duplicates=$(awk -F'|' '{print $2}' "$tmpfile" | sort | uniq -d)
+  if [ -n "$duplicates" ]; then
+    echo -e "${RED}[overlap-gate] BLOCK: Stage $stage_num has overlapping target files:${NC}" >&2
+    while IFS= read -r dupfile; do
+      local owners
+      owners=$(awk -F'|' -v f="$dupfile" '$2 == f {print $1}' "$tmpfile" | tr '\n' ' ')
+      echo -e "${RED}  - $dupfile (slices: $owners)${NC}" >&2
+    done <<< "$duplicates"
+    echo -e "${RED}  Edit the epic plan so each file is touched by only one slice per stage.${NC}" >&2
+    rm -f "$tmpfile"
+    return 1
+  fi
+
+  rm -f "$tmpfile"
+  return 0
+}
+
+# Per-slice worktree helpers — opt-in via HARVEST_PARALLEL_WORKTREE=1.
+# Each slice runs in .harvest-wt/stage-N/slice-I on its own branch.
+# After the slice completes, changes are transferred back to the main
+# working tree via `git diff | git apply` (the overlap gate guarantees
+# that multiple slice patches will not collide).
+WORKTREE_ENABLED=0
+if [ "${HARVEST_PARALLEL_WORKTREE:-0}" = "1" ] \
+   && [ "$DRY_RUN" != true ] \
+   && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  WORKTREE_ENABLED=1
+fi
+
+setup_slice_worktree() {
+  local stage_num="$1" idx="$2"
+  [ "$WORKTREE_ENABLED" -ne 1 ] && return 0
+  local wt_dir="$PROJECT_DIR/.harvest-wt/stage-${stage_num}/slice-${idx}"
+  local wt_branch="harvest-wt/${RUN_ID}/s${stage_num}/${idx}"
+  mkdir -p "$(dirname "$wt_dir")"
+  if [ -d "$wt_dir" ]; then
+    git worktree remove --force "$wt_dir" >/dev/null 2>&1 || true
+  fi
+  git worktree add --quiet "$wt_dir" -b "$wt_branch" HEAD >/dev/null 2>&1 \
+    || { echo "[worktree] WARN: cannot create worktree for slice $idx — falling back to shared tree" >&2; return 1; }
+  echo "$wt_dir"
+}
+
+finalize_slice_worktree() {
+  local wt_dir="$1"
+  [ "$WORKTREE_ENABLED" -ne 1 ] && return 0
+  [ -z "$wt_dir" ] && return 0
+  [ -d "$wt_dir" ] || return 0
+
+  # Capture uncommitted changes as patch and apply to main worktree
+  local patch
+  patch=$(mktemp -t harvest-slice-patch.XXXXXX)
+  ( cd "$wt_dir" && git add -A && git diff --cached ) > "$patch" 2>/dev/null
+  if [ -s "$patch" ]; then
+    ( cd "$PROJECT_DIR" && git apply --index "$patch" ) \
+      || echo "[worktree] WARN: failed to apply slice patch from $wt_dir — inspect manually" >&2
+  fi
+  rm -f "$patch"
+
+  # Remove worktree and delete its branch
+  local wt_branch
+  wt_branch=$( ( cd "$wt_dir" && git symbolic-ref --short HEAD 2>/dev/null ) || true)
+  git worktree remove --force "$wt_dir" >/dev/null 2>&1 || true
+  [ -n "$wt_branch" ] && git branch -D "$wt_branch" >/dev/null 2>&1 || true
+}
+
 # Commit all changes from a parallel stage in one consolidated commit
 # Args: stage_number slice_indices...
 # Multi-repo: commits to each git repo that has changes independently
@@ -231,6 +497,11 @@ commit_stage() {
   shift
   local indices=("$@")
 
+  if [ "$DRY_RUN" = true ]; then
+    echo -e "${YELLOW}[DRY-RUN] Skipping commit for Stage $stage_num${NC}"
+    return 0
+  fi
+
   echo -e "${BLUE}Committing Stage $stage_num changes...${NC}"
 
   # Build slice summaries for commit message
@@ -238,7 +509,7 @@ commit_stage() {
   for idx in "${indices[@]}"; do
     local desc="${SLICES[$idx]}"
     local short_desc
-    short_desc=$(echo "$desc" | sed -E 's/^(Slice|Task|태스크|슬라이스)\s+[0-9]+\s*[-—:]\s*//')
+    short_desc=$(echo "$desc" | sed -E 's/^(Slice|Task)\s+[0-9]+\s*[-—:]\s*//')
     if [ -n "$slice_summaries" ]; then
       slice_summaries="${slice_summaries} + ${short_desc}"
     else
@@ -296,6 +567,10 @@ commit_stage() {
 # If scripts/deploy-hook.sh exists and is executable, run it after each stage commit
 run_deploy_hook() {
   local stage_num="$1"
+  if [ "$DRY_RUN" = true ]; then
+    echo -e "${YELLOW}[DRY-RUN] Skipping deploy hook for Stage $stage_num${NC}"
+    return 0
+  fi
   local hook="$PROJECT_DIR/scripts/deploy-hook.sh"
   if [ -x "$hook" ]; then
     echo -e "${BLUE}Running deploy hook for Stage $stage_num...${NC}"
@@ -316,6 +591,14 @@ run_parallel_stage() {
   local count=${#indices[@]}
 
   echo -e "${CYAN}Stage $stage_num: $count slices in parallel (max $MAX_PARALLEL concurrent)${NC}"
+
+  # Overlap gate — refuse to launch if any two slices target the same file
+  if ! check_slice_overlap "$stage_num" "${indices[@]}"; then
+    return 1
+  fi
+
+  # Per-slice worktree bookkeeping (only populated when WORKTREE_ENABLED=1)
+  declare -A SLICE_WT_DIR=()
 
   # Prepare per-task handoff files
   for idx in "${indices[@]}"; do
@@ -350,8 +633,29 @@ run_parallel_stage() {
 
       echo -e "  ${BLUE}Starting: Slice $((idx+1)) — ${slice_desc}${NC}"
 
-      "$SCRIPT_DIR/run-task.sh" --task-id "slice-${idx}" --no-commit "$slice_desc" \
-        > "${task_log_dir}/stdout.log" 2>&1 &
+      local dry_flag=""
+      if [ "$DRY_RUN" = true ]; then
+        dry_flag="--dry-run"
+      fi
+
+      local slice_cwd="$PROJECT_DIR"
+      if [ "$WORKTREE_ENABLED" -eq 1 ]; then
+        local wt
+        wt=$(setup_slice_worktree "$stage_num" "$idx" 2>/dev/null || true)
+        if [ -n "$wt" ] && [ -d "$wt" ]; then
+          SLICE_WT_DIR[$idx]="$wt"
+          slice_cwd="$wt"
+          # Carry handoff file into the worktree so the slice can read it
+          mkdir -p "$wt/handoff"
+          [ -f "$PROJECT_DIR/handoff/task-slice-${idx}.md" ] \
+            && cp "$PROJECT_DIR/handoff/task-slice-${idx}.md" "$wt/handoff/" 2>/dev/null || true
+        fi
+      fi
+
+      ( cd "$slice_cwd" && \
+        TASK_INDEX="$((idx+1))" TASK_TOTAL="$TOTAL" EPIC_NAME="$EPIC" \
+          "$SCRIPT_DIR/run-task.sh" --task-id "slice-${idx}" --no-commit ${dry_flag:+$dry_flag} "$slice_desc" \
+        ) > "${task_log_dir}/stdout.log" 2>&1 &
 
       pids+=($!)
       pid_to_idx+=("$idx")
@@ -379,6 +683,18 @@ run_parallel_stage() {
 
     batch_start=$batch_end
   done
+
+  # Merge worktree patches back to main working tree and clean up
+  if [ "$WORKTREE_ENABLED" -eq 1 ]; then
+    for idx in "${indices[@]}"; do
+      local wt_dir="${SLICE_WT_DIR[$idx]:-}"
+      [ -n "$wt_dir" ] && finalize_slice_worktree "$wt_dir"
+      # Bring slice's handoff file (if any) back to main tree
+      if [ -n "$wt_dir" ] && [ -f "$wt_dir/handoff/task-slice-${idx}.md" ]; then
+        cp "$wt_dir/handoff/task-slice-${idx}.md" "$PROJECT_DIR/handoff/" 2>/dev/null || true
+      fi
+    done
+  fi
 
   # Report results
   if $all_ok; then
@@ -447,6 +763,7 @@ for stage_num in $(seq 1 "$STAGE_COUNT"); do
 
   stage_slice_count=${#stage_indices[@]}
 
+  write_epic_status "STAGE=${stage_num}"
   log_phase "STAGE $stage_num/$STAGE_COUNT ($stage_slice_count slice(s))"
 
   if ! $HAS_STAGES || [ "$stage_slice_count" -eq 1 ]; then
@@ -456,7 +773,12 @@ for stage_num in $(seq 1 "$STAGE_COUNT"); do
 
     echo -e "${BLUE}Running: Slice $((local_idx+1)) — ${SLICE}${NC}"
 
-    if "$SCRIPT_DIR/run-task.sh" --no-commit "$SLICE"; then
+    dry_flag=""
+    if [ "$DRY_RUN" = true ]; then
+      dry_flag="--dry-run"
+    fi
+    if TASK_INDEX="$((local_idx+1))" TASK_TOTAL="$TOTAL" EPIC_NAME="$EPIC" \
+         "$SCRIPT_DIR/run-task.sh" --no-commit ${dry_flag:+$dry_flag} "$SLICE"; then
       echo -e "${GREEN}✓ Slice $((local_idx+1)) complete${NC}"
 
       # Orchestrator handles commit (same as parallel stages)
@@ -524,7 +846,13 @@ for stage_num in $(seq 1 "$STAGE_COUNT"); do
   fi
 
   COMPLETED_STAGES=$((COMPLETED_STAGES+1))
+  write_epic_status "COMPLETED_STAGES=${COMPLETED_STAGES}"
 done
+
+write_epic_status "STAGE=done" "COMPLETED_STAGES=${COMPLETED_STAGES}"
+
+# Auto-merge epic branch to original on successful completion
+finalize_epic_branch
 
 echo ""
 echo -e "${GREEN}════════════════════════════════════════${NC}"

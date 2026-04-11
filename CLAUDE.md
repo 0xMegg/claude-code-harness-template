@@ -80,6 +80,16 @@ This workspace coordinates multiple independent repositories:
 - `templates/evaluation.md` — task evaluation metrics (fill after each task)
 - `{{SCHEMA_FILE}}` — data schema (source of truth), if applicable
 
+## Self-Improvement (Optional — activate by setting harvest/config.json enabled: true)
+- `harvest/config.json` — trend-harvester pipeline configuration
+- `context/harvest-policy.md` — auto-apply vs manual approval policy
+- `/harvest` — run full pipeline
+- `/harvest scan` — collection only
+- `/harvest validate <description>` — manual input validation (Phase 2-5)
+- `/harvest add <description>` — alias for /harvest validate
+- `/harvest judge` — baseline measurement + autoresearch
+- `/harvest status` — check current status
+
 ## 3-Role Workflow
 - `/plan` — Planner: read-only, writes plans to `outputs/plans/`
 - `/develop` — Developer: implements + verifies, does NOT commit
