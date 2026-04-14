@@ -17,6 +17,12 @@
 
 set -euo pipefail
 
+# Bash 3.2+ required (macOS default). Reject older versions early.
+if (( BASH_VERSINFO[0] < 3 )) || { (( BASH_VERSINFO[0] == 3 )) && (( BASH_VERSINFO[1] < 2 )); }; then
+  echo "ERROR: run-epic.sh requires bash 3.2+. Current: $BASH_VERSION" >&2
+  exit 1
+fi
+
 # ============================================================
 # Configuration
 # ============================================================
@@ -30,10 +36,15 @@ MAX_PARALLEL="${MAX_PARALLEL:-3}"
 # Argument parsing (flags first, then epic description)
 # ============================================================
 DRY_RUN=false
+FORCE_RERUN=false
 while [ $# -gt 0 ]; do
   case "${1:-}" in
     --dry-run)
       DRY_RUN=true
+      shift
+      ;;
+    --force)
+      FORCE_RERUN=true
       shift
       ;;
     --)
@@ -67,48 +78,186 @@ ln -sfn "$LOG_DIR" "/tmp/${PROJECT_NAME}-run/latest"
 export EPIC_LOG_DIR="$LOG_DIR"
 
 # ============================================================
+# Harness version staleness check
+# Warns if .claude/.harness-version is missing or older than 7 days.
+# ============================================================
+check_harness_version() {
+  local vfile="$PROJECT_DIR/.claude/.harness-version"
+  if [ ! -f "$vfile" ]; then
+    echo -e "${YELLOW}⚠ .claude/.harness-version not found — run build-template.sh from harness-forge to stamp the version${NC}" >&2
+    return 0
+  fi
+  # shellcheck disable=SC1090
+  source "$vfile"
+  echo -e "${CYAN}  Harness: v${HARNESS_VERSION:-?} (forge ${FORGE_COMMIT:-?}, built ${BUILD_TIMESTAMP:-?})${NC}" >&2
+
+  # Staleness: warn if BUILD_TIMESTAMP is older than 7 days
+  if [ -n "${BUILD_TIMESTAMP:-}" ]; then
+    local build_epoch now_epoch age_days
+    build_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$BUILD_TIMESTAMP" +%s 2>/dev/null || date -d "$BUILD_TIMESTAMP" +%s 2>/dev/null || echo 0)
+    now_epoch=$(date +%s)
+    if [ "$build_epoch" -gt 0 ]; then
+      age_days=$(( (now_epoch - build_epoch) / 86400 ))
+      if [ "$age_days" -ge 7 ]; then
+        echo -e "${YELLOW}⚠ Harness template is ${age_days} days old — consider running build-template.sh to pick up forge improvements${NC}" >&2
+      fi
+    fi
+  fi
+}
+check_harness_version
+
+# ============================================================
+# Git repo discovery (multi-repo support) — must be defined
+# before setup_epic_branch so the function can iterate repos.
+# ============================================================
+# If PROJECT_DIR is a git repo, returns PROJECT_DIR only.
+# Otherwise, finds immediate child directories that are git repos.
+discover_git_repos() {
+  if [ -d "$PROJECT_DIR/.git" ] || git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+    echo "$PROJECT_DIR"
+    return
+  fi
+
+  local repos=()
+  for dir in "$PROJECT_DIR"/*/; do
+    if [ -d "${dir}.git" ]; then
+      repos+=("${dir%/}")
+    fi
+  done
+
+  if [ ${#repos[@]} -eq 0 ]; then
+    echo "WARNING: No git repos found under $PROJECT_DIR" >&2
+    return 1
+  fi
+
+  printf '%s\n' "${repos[@]}"
+}
+
+IS_MULTI_REPO=false
+if ! [ -d "$PROJECT_DIR/.git" ] && ! git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+  IS_MULTI_REPO=true
+fi
+
+# ============================================================
 # Epic branch isolation — create epic/{RUN_ID} branch off main
 # (skipped for dry-run, non-git, or HARVEST_ALLOW_MAIN=1)
+# Multi-repo: creates epic branch in each sub-repo individually.
 # ============================================================
 EPIC_BRANCH=""
 EPIC_ORIGINAL_BRANCH=""
+EPIC_ORIGINAL_BRANCHES=()   # multi-repo: "repo_path|original_branch" entries
 
 setup_epic_branch() {
   if [ "$DRY_RUN" = true ]; then return 0; fi
   if [ "${HARVEST_ALLOW_MAIN:-0}" = "1" ]; then return 0; fi
-  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then return 0; fi
 
-  EPIC_ORIGINAL_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
-  case "$EPIC_ORIGINAL_BRANCH" in
-    main|master) ;;
-    *) return 0 ;;   # already on a non-main branch
-  esac
+  if $IS_MULTI_REPO; then
+    # --- Multi-repo: create epic branch in each sub-repo ---
 
-  if [ -n "$(git status --porcelain)" ]; then
-    echo "ERROR: working tree dirty on $EPIC_ORIGINAL_BRANCH — commit/stash first or set HARVEST_ALLOW_MAIN=1" >&2
-    exit 1
+    # Warn about stale epic branches from previous runs
+    while IFS= read -r repo_dir; do
+      local stale
+      stale=$(cd "$repo_dir" && git branch --list "epic/*" 2>/dev/null | tr -d ' ' || true)
+      if [ -n "$stale" ]; then
+        echo "WARN: stale epic branches in $(basename "$repo_dir"): $stale" >&2
+        echo "  Clean up: cd $repo_dir && git branch -D $stale" >&2
+      fi
+    done < <(discover_git_repos)
+
+    while IFS= read -r repo_dir; do
+      cd "$repo_dir"
+      local orig
+      orig=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+      case "$orig" in
+        main|master) ;;
+        *) echo "[epic-branch] [$(basename "$repo_dir")] on $orig (non-main) — skipping"; continue ;;
+      esac
+
+      if [ -n "$(git status --porcelain)" ]; then
+        echo "ERROR: working tree dirty in $(basename "$repo_dir") on $orig — commit/stash first or set HARVEST_ALLOW_MAIN=1" >&2
+        cd "$PROJECT_DIR"
+        exit 1
+      fi
+
+      git checkout -b "epic/${RUN_ID}" >/dev/null 2>&1
+      EPIC_ORIGINAL_BRANCHES+=("${repo_dir}|${orig}")
+      echo "[epic-branch] [$(basename "$repo_dir")] ${orig} → epic/${RUN_ID}"
+    done < <(discover_git_repos)
+
+    cd "$PROJECT_DIR"
+
+    if [ ${#EPIC_ORIGINAL_BRANCHES[@]} -gt 0 ]; then
+      EPIC_BRANCH="epic/${RUN_ID}"
+    fi
+  else
+    # --- Single-repo: original logic ---
+    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then return 0; fi
+
+    EPIC_ORIGINAL_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+    case "$EPIC_ORIGINAL_BRANCH" in
+      main|master) ;;
+      *) return 0 ;;   # already on a non-main branch
+    esac
+
+    if [ -n "$(git status --porcelain)" ]; then
+      echo "ERROR: working tree dirty on $EPIC_ORIGINAL_BRANCH — commit/stash first or set HARVEST_ALLOW_MAIN=1" >&2
+      exit 1
+    fi
+
+    # Warn about stale epic branches
+    local stale
+    stale=$(git branch --list "epic/*" 2>/dev/null | tr -d ' ' || true)
+    if [ -n "$stale" ]; then
+      echo "WARN: stale epic branches: $stale" >&2
+      echo "  Clean up: git branch -D $stale" >&2
+    fi
+
+    EPIC_BRANCH="epic/${RUN_ID}"
+    git checkout -b "$EPIC_BRANCH" >/dev/null 2>&1
+    echo "[epic-branch] ${EPIC_ORIGINAL_BRANCH} → ${EPIC_BRANCH}"
   fi
-
-  EPIC_BRANCH="epic/${RUN_ID}"
-  git checkout -b "$EPIC_BRANCH" >/dev/null 2>&1
-  echo "[epic-branch] ${EPIC_ORIGINAL_BRANCH} → ${EPIC_BRANCH}"
 }
 
 finalize_epic_branch() {
   [ -z "$EPIC_BRANCH" ] && return 0
   [ "$DRY_RUN" = true ] && return 0
 
-  git checkout "$EPIC_ORIGINAL_BRANCH" >/dev/null 2>&1 || {
-    echo "WARN: cannot return to $EPIC_ORIGINAL_BRANCH — ${EPIC_BRANCH} preserved" >&2
-    return 0
-  }
-  if git merge --ff-only "$EPIC_BRANCH" >/dev/null 2>&1; then
-    echo "[epic-branch] merged ${EPIC_BRANCH} → ${EPIC_ORIGINAL_BRANCH} (ff-only)"
-    git push 2>/dev/null && echo "[epic-branch] pushed ${EPIC_ORIGINAL_BRANCH}" || echo "[epic-branch] push skipped or failed — local merge kept"
-    git branch -d "$EPIC_BRANCH" >/dev/null 2>&1 || true
+  if $IS_MULTI_REPO; then
+    # --- Multi-repo: finalize each sub-repo ---
+    for entry in "${EPIC_ORIGINAL_BRANCHES[@]}"; do
+      local repo_dir="${entry%%|*}"
+      local orig="${entry##*|}"
+      cd "$repo_dir"
+
+      git checkout "$orig" >/dev/null 2>&1 || {
+        echo "WARN: [$(basename "$repo_dir")] cannot return to $orig — epic/${RUN_ID} preserved" >&2
+        continue
+      }
+      if git merge --ff-only "epic/${RUN_ID}" >/dev/null 2>&1; then
+        echo "[epic-branch] [$(basename "$repo_dir")] merged epic/${RUN_ID} → ${orig} (ff-only)"
+        git push 2>/dev/null && echo "[epic-branch] [$(basename "$repo_dir")] pushed ${orig}" \
+          || echo "[epic-branch] [$(basename "$repo_dir")] push skipped or failed — local merge kept"
+        git branch -d "epic/${RUN_ID}" >/dev/null 2>&1 || true
+      else
+        echo "WARN: [$(basename "$repo_dir")] ff-only merge failed — leave epic/${RUN_ID} for manual review" >&2
+        git checkout "epic/${RUN_ID}" >/dev/null 2>&1 || true
+      fi
+    done
+    cd "$PROJECT_DIR"
   else
-    echo "WARN: ff-only merge failed — leave ${EPIC_BRANCH} for manual review" >&2
-    git checkout "$EPIC_BRANCH" >/dev/null 2>&1 || true
+    # --- Single-repo: original logic ---
+    git checkout "$EPIC_ORIGINAL_BRANCH" >/dev/null 2>&1 || {
+      echo "WARN: cannot return to $EPIC_ORIGINAL_BRANCH — ${EPIC_BRANCH} preserved" >&2
+      return 0
+    }
+    if git merge --ff-only "$EPIC_BRANCH" >/dev/null 2>&1; then
+      echo "[epic-branch] merged ${EPIC_BRANCH} → ${EPIC_ORIGINAL_BRANCH} (ff-only)"
+      git push 2>/dev/null && echo "[epic-branch] pushed ${EPIC_ORIGINAL_BRANCH}" || echo "[epic-branch] push skipped or failed — local merge kept"
+      git branch -d "$EPIC_BRANCH" >/dev/null 2>&1 || true
+    else
+      echo "WARN: ff-only merge failed — leave ${EPIC_BRANCH} for manual review" >&2
+      git checkout "$EPIC_BRANCH" >/dev/null 2>&1 || true
+    fi
   fi
 }
 
@@ -183,37 +332,6 @@ print_epic_status_line() {
     echo -e "  ${CYAN}🎯 ${EPIC_NAME:-?} | Stage ${STAGE:-?}/${STAGE_TOTAL:-?} | Tasks: ${TASK_TOTAL:-?} | ⏱ ${mm}m${ss}s${NC}"
   )
 }
-
-# ============================================================
-# Git repo discovery (multi-repo support)
-# ============================================================
-# If PROJECT_DIR is a git repo, returns PROJECT_DIR only.
-# Otherwise, finds immediate child directories that are git repos.
-discover_git_repos() {
-  if [ -d "$PROJECT_DIR/.git" ] || git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
-    echo "$PROJECT_DIR"
-    return
-  fi
-
-  local repos=()
-  for dir in "$PROJECT_DIR"/*/; do
-    if [ -d "${dir}.git" ]; then
-      repos+=("${dir%/}")
-    fi
-  done
-
-  if [ ${#repos[@]} -eq 0 ]; then
-    echo -e "${RED}WARNING: No git repos found under $PROJECT_DIR${NC}" >&2
-    return 1
-  fi
-
-  printf '%s\n' "${repos[@]}"
-}
-
-IS_MULTI_REPO=false
-if ! [ -d "$PROJECT_DIR/.git" ] && ! git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
-  IS_MULTI_REPO=true
-fi
 
 # ============================================================
 # Normalize input: bare number → "Epic N"
@@ -307,7 +425,7 @@ while IFS= read -r line; do
   fi
 
   # Detect Slice/Task lines (existing pattern)
-  if echo "$line" | grep -qiE "^[[:space:]]*[-*|#0-9].*\b(Task|Slice)\s+[0-9]"; then
+  if echo "$line" | grep -qE "^#{3,4}[[:space:]]+(Task|Slice)[[:space:]]+[0-9]"; then
     SLICE_DESC=$(echo "$line" | sed -E '
       s/^[[:space:]]*[-*|]+[[:space:]]*//;
       s/\|[[:space:]]*$//;
@@ -340,7 +458,7 @@ done < "$EPIC_PLAN"
 if [ ${#SLICES[@]} -eq 0 ]; then
   echo -e "${YELLOW}! Could not auto-parse Slices from epic plan${NC}"
   echo "Run slices manually: ./scripts/run-task.sh \"Task N — description\""
-  exit 0
+  exit 1
 fi
 
 TOTAL=${#SLICES[@]}
@@ -485,8 +603,8 @@ finalize_slice_worktree() {
   # Remove worktree and delete its branch
   local wt_branch
   wt_branch=$( ( cd "$wt_dir" && git symbolic-ref --short HEAD 2>/dev/null ) || true)
-  git worktree remove --force "$wt_dir" >/dev/null 2>&1 || true
-  [ -n "$wt_branch" ] && git branch -D "$wt_branch" >/dev/null 2>&1 || true
+  git worktree remove --force "$wt_dir" >/dev/null 2>&1 || echo "WARNING: failed to remove worktree $wt_dir" >&2
+  [ -n "$wt_branch" ] && { git branch -D "$wt_branch" >/dev/null 2>&1 || echo "WARNING: failed to delete branch $wt_branch" >&2; }
 
   # Tidy up empty parent directories left behind by setup_slice_worktree.
   # rmdir only succeeds when the directory is empty, so this is safe even if
@@ -604,7 +722,7 @@ run_parallel_stage() {
   fi
 
   # Per-slice worktree bookkeeping (only populated when WORKTREE_ENABLED=1)
-  declare -A SLICE_WT_DIR=()
+  SLICE_WT_DIR=()
 
   # Prepare per-task handoff files
   for idx in "${indices[@]}"; do
@@ -637,6 +755,19 @@ run_parallel_stage() {
       local task_log_dir="${LOG_DIR}/task-slice-${idx}"
       mkdir -p "$task_log_dir"
 
+      # H2: Skip already-approved slices unless --force
+      if [ "$FORCE_RERUN" = false ]; then
+        local par_status="${task_log_dir}/task-status"
+        if [ -f "$par_status" ]; then
+          local pv=""
+          pv=$(grep "^VERDICT=" "$par_status" 2>/dev/null | tail -1 | cut -d= -f2 | tr -d "'" || true)
+          if [ "$pv" = "APPROVE" ]; then
+            echo -e "  ${GREEN}Skip: Slice $((idx+1)) already APPROVE'd${NC}"
+            continue
+          fi
+        fi
+      fi
+
       echo -e "  ${BLUE}Starting: Slice $((idx+1)) — ${slice_desc}${NC}"
 
       local dry_flag=""
@@ -668,7 +799,61 @@ run_parallel_stage() {
     done
 
     echo -e "  Logs: ${LOG_DIR}/task-slice-{...}/"
+
+    # H1: Health check — verify batch processes started (5s grace period)
+    if [ ${#pids[@]} -gt 0 ]; then
+      sleep 5
+      for hc_idx in "${!pids[@]}"; do
+        local hc_pid="${pids[$hc_idx]}"
+        local hc_s_idx="${pid_to_idx[$hc_idx]}"
+        local hc_log="${LOG_DIR}/task-slice-${hc_s_idx}/stdout.log"
+        if ! kill -0 "$hc_pid" 2>/dev/null; then
+          echo -e "  ${RED}WARNING: Slice $((hc_s_idx+1)) process died within 5s (PID $hc_pid)${NC}" >&2
+        elif [ ! -f "$hc_log" ] || [ ! -s "$hc_log" ]; then
+          echo -e "  ${YELLOW}WARNING: Slice $((hc_s_idx+1)) log empty after 5s — may be stuck${NC}" >&2
+        fi
+      done
+    fi
+
     echo "  Waiting for batch to complete..."
+
+    # D: Background progress monitor — polls task-status files every 10s
+    _monitor_pids=()
+    if [ ${#pids[@]} -gt 0 ] && [ "$DRY_RUN" = false ]; then
+      (
+        local prev_states=""
+        while true; do
+          sleep 10
+          local states=""
+          for m_idx in "${pid_to_idx[@]}"; do
+            local sf="${LOG_DIR}/task-slice-${m_idx}/task-status"
+            if [ -f "$sf" ]; then
+              local role="" iter="" verdict=""
+              role=$(grep "^ROLE=" "$sf" 2>/dev/null | tail -1 | cut -d= -f2 | tr -d "'" || true)
+              iter=$(grep "^ITER=" "$sf" 2>/dev/null | tail -1 | cut -d= -f2 | tr -d "'" || true)
+              verdict=$(grep "^VERDICT=" "$sf" 2>/dev/null | tail -1 | cut -d= -f2 | tr -d "'" || true)
+              states="${states}  S$((m_idx+1)):${role:-?}"
+              [ -n "$iter" ] && [ "$iter" != "1" ] && states="${states}(i${iter})"
+              [ -n "$verdict" ] && states="${states}→${verdict}"
+            else
+              states="${states}  S$((m_idx+1)):init"
+            fi
+          done
+          # Only print when state changes
+          if [ "$states" != "$prev_states" ]; then
+            echo -e "  ${CYAN}[progress]${states}${NC}"
+            prev_states="$states"
+          fi
+          # Exit if no background PIDs are alive
+          local any_alive=false
+          for check_pid in "${pids[@]}"; do
+            kill -0 "$check_pid" 2>/dev/null && any_alive=true && break
+          done
+          $any_alive || break
+        done
+      ) &
+      _monitor_pids+=($!)
+    fi
 
     # Wait for all PIDs in this batch (|| true prevents set -e from killing us)
     for p_idx in "${!pids[@]}"; do
@@ -685,6 +870,11 @@ run_parallel_stage() {
         all_ok=false
         failed_slices+=("$s_idx")
       fi
+    done
+
+    # Stop progress monitor
+    for mp in "${_monitor_pids[@]}"; do
+      kill "$mp" 2>/dev/null; wait "$mp" 2>/dev/null || true
     done
 
     batch_start=$batch_end
@@ -777,6 +967,20 @@ for stage_num in $(seq 1 "$STAGE_COUNT"); do
     local_idx="${stage_indices[0]}"
     SLICE="${SLICES[$local_idx]}"
 
+    # H2: Skip already-approved slices unless --force
+    if [ "$FORCE_RERUN" = false ]; then
+      seq_status="${LOG_DIR}/task-slice-${local_idx}/task-status"
+      if [ -f "$seq_status" ]; then
+        prev_verdict=$(grep "^VERDICT=" "$seq_status" 2>/dev/null | tail -1 | cut -d= -f2 | tr -d "'" || true)
+        if [ "$prev_verdict" = "APPROVE" ]; then
+          echo -e "  ${GREEN}Skip: Slice $((local_idx+1)) already APPROVE'd${NC}"
+          COMPLETED_STAGES=$((COMPLETED_STAGES+1))
+          write_epic_status "COMPLETED_STAGES=${COMPLETED_STAGES}"
+          continue
+        fi
+      fi
+    fi
+
     echo -e "${BLUE}Running: Slice $((local_idx+1)) — ${SLICE}${NC}"
 
     dry_flag=""
@@ -801,6 +1005,8 @@ for stage_num in $(seq 1 "$STAGE_COUNT"); do
         exit 1
       fi
       run_deploy_hook "$stage_num"
+      # M6: Sync handoff after sequential stage completion
+      merge_stage_handoffs "$stage_num" "$local_idx"
     else
       echo -e "${RED}✗ Slice $((local_idx+1)) failed: $SLICE${NC}"
       echo ""

@@ -80,6 +80,36 @@ fi
 mkdir -p "$LOG_DIR"
 
 # ============================================================
+# Harness version staleness check
+# Warns if .claude/.harness-version is missing or older than 7 days.
+# Skipped when launched by run-epic.sh (EPIC_NAME is set) to avoid duplicate warnings.
+# ============================================================
+check_harness_version() {
+  if [ -n "${EPIC_NAME:-}" ]; then return 0; fi  # epic already checked
+  local vfile="$PROJECT_DIR/.claude/.harness-version"
+  if [ ! -f "$vfile" ]; then
+    echo -e "${YELLOW}⚠ .claude/.harness-version not found — run build-template.sh from harness-forge to stamp the version${NC}" >&2
+    return 0
+  fi
+  # shellcheck disable=SC1090
+  source "$vfile"
+  echo -e "${CYAN}  Harness: v${HARNESS_VERSION:-?} (forge ${FORGE_COMMIT:-?}, built ${BUILD_TIMESTAMP:-?})${NC}" >&2
+
+  if [ -n "${BUILD_TIMESTAMP:-}" ]; then
+    local build_epoch now_epoch age_days
+    build_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$BUILD_TIMESTAMP" +%s 2>/dev/null || date -d "$BUILD_TIMESTAMP" +%s 2>/dev/null || echo 0)
+    now_epoch=$(date +%s)
+    if [ "$build_epoch" -gt 0 ]; then
+      age_days=$(( (now_epoch - build_epoch) / 86400 ))
+      if [ "$age_days" -ge 7 ]; then
+        echo -e "${YELLOW}⚠ Harness template is ${age_days} days old — consider running build-template.sh to pick up forge improvements${NC}" >&2
+      fi
+    fi
+  fi
+}
+check_harness_version
+
+# ============================================================
 # Branch isolation — create task/{id} branch if on main/master
 # (skipped when parent epic already set up branch via TASK_ID,
 #  or during dry-run, or in non-git dirs, or when HARVEST_ALLOW_MAIN=1)
@@ -234,6 +264,55 @@ write_evaluation_stub() {
     } > "$eval_file"
   fi
   echo "[eval] stub written: $eval_file"
+}
+
+log_task_entry() {
+  # Append a structured log line to ~/Dev/13.claude/logs/YYYY-MM-DD.md
+  # Called on EVERY task completion — success or failure.
+  [ "$DRY_RUN" = true ] && return 0
+
+  local log_home="${TASK_LOG_HOME:-$HOME/Dev/13.claude/logs}"
+  mkdir -p "$log_home"
+
+  local now_hhmm
+  now_hhmm=$(date +%H:%M)
+  local now_hour
+  now_hour=$(date +%H | sed 's/^0//')
+
+  # 오전 9시 경계 규칙: 00:00~08:59 → 전날 파일에 기록
+  local log_date
+  if [ "$now_hour" -lt 9 ]; then
+    log_date=$(date -v-1d +%Y-%m-%d 2>/dev/null || date -d "yesterday" +%Y-%m-%d)
+  else
+    log_date=$(date +%Y-%m-%d)
+  fi
+
+  local log_file="${log_home}/${log_date}.md"
+  local proj="${PROJECT_NAME}"
+  local verdict="${VERDICT:-UNKNOWN}"
+  local task_desc="${TASK:-untitled}"
+
+  # 소요 시간 계산 (from STATUS_FILE's START_EPOCH)
+  local elapsed_str="0:00"
+  if [ -f "$STATUS_FILE" ]; then
+    local _start_epoch
+    _start_epoch=$(grep '^START_EPOCH=' "$STATUS_FILE" | tail -1 | sed "s/^START_EPOCH=//; s/^'//; s/'$//")
+    if [ -n "$_start_epoch" ]; then
+      local _now_epoch
+      _now_epoch=$(date +%s)
+      local _el=$(( _now_epoch - _start_epoch ))
+      local _mm=$(( _el / 60 ))
+      local _ss=$(( _el % 60 ))
+      elapsed_str=$(printf '%d:%02d' "$_mm" "$_ss")
+    fi
+  fi
+
+  # 로그 라인 작성
+  printf -- '- [%s] **%s** %s — %s (%s)\n' \
+    "$now_hhmm" "$proj" "$task_desc" "$verdict" "$elapsed_str" \
+    >> "$log_file"
+
+  echo "[log] entry appended: $log_file"
 }
 
 # Colors
@@ -532,6 +611,7 @@ log_phase "PHASE 1/3: PLAN"
 if ! run_claude "plan" "/plan $TASK"; then
   log_fail "Plan phase failed. Check ${LOG_DIR}/plan.log"
   write_status "ROLE=failed" "VERDICT=PLAN_FAILED"
+  log_task_entry
   exit 1
 fi
 
@@ -559,6 +639,7 @@ while [ "$ITER" -le "$MAX_ITER" ]; do
   if ! run_claude "develop-iter${ITER}" "$DEVELOP_PROMPT"; then
     log_fail "Develop phase failed (iter ${ITER}). Check ${DEVELOP_LOG}"
     write_status "ROLE=failed" "VERDICT=DEVELOP_FAILED"
+    log_task_entry
     exit 1
   fi
   log_success "Develop phase complete (iter ${ITER})"
@@ -575,13 +656,23 @@ while [ "$ITER" -le "$MAX_ITER" ]; do
   if ! run_claude "review-iter${ITER}" "/review $TASK"; then
     log_fail "Review phase failed (iter ${ITER}). Check ${REVIEW_LOG}"
     write_status "ROLE=failed" "VERDICT=REVIEW_FAILED"
+    log_task_entry
     exit 1
   fi
 
-  # Check verdict
-  if grep -qi "REQUEST_CHANGES\|request.changes" "$REVIEW_LOG" 2>/dev/null; then
-    log_fail "Review verdict: REQUEST_CHANGES (iter ${ITER})"
+  # Check verdict — search only the tail of the review log to avoid
+  # false positives from earlier context (e.g. "fixed previous REQUEST_CHANGES").
+  # Structured markers (<!-- FINAL_VERDICT: X -->) are checked first.
+  VERDICT_TAIL=$(tail -40 "$REVIEW_LOG" 2>/dev/null || true)
+
+  if echo "$VERDICT_TAIL" | grep -q '<!-- FINAL_VERDICT: APPROVE -->'; then
+    log_success "Review verdict: APPROVE (iter ${ITER}) [marker]"
+    VERDICT="APPROVE"
+    break
+  elif echo "$VERDICT_TAIL" | grep -q '<!-- FINAL_VERDICT: REQUEST_CHANGES -->'; then
+    log_fail "Review verdict: REQUEST_CHANGES (iter ${ITER}) [marker]"
     write_status "ROLE=done" "VERDICT=REQUEST_CHANGES"
+    log_task_entry
     echo ""
     echo "Review output: $REVIEW_LOG"
     echo ""
@@ -590,9 +681,35 @@ while [ "$ITER" -le "$MAX_ITER" ]; do
     echo "  2. Fix: /develop $TASK — REQUEST_CHANGES fix"
     echo "  3. Re-review: /review $TASK"
     exit 1
-  fi
-
-  if grep -qi "ITERATE" "$REVIEW_LOG" 2>/dev/null; then
+  elif echo "$VERDICT_TAIL" | grep -q '<!-- FINAL_VERDICT: ITERATE -->'; then
+    if [ "$ITER" -lt "$MAX_ITER" ]; then
+      log_warn "Review verdict: ITERATE (iter ${ITER}/${MAX_ITER}) [marker] — refining..."
+      write_status "VERDICT=ITERATE"
+      ITER=$((ITER + 1))
+      continue
+    else
+      log_warn "Review verdict: ITERATE but max iterations reached (${MAX_ITER})"
+      log_warn "Accepting current state. Manual refinement may be needed."
+      VERDICT="ITERATE_EXHAUSTED"
+      break
+    fi
+  elif echo "$VERDICT_TAIL" | grep -qi "APPROVE"; then
+    log_success "Review verdict: APPROVE (iter ${ITER})"
+    VERDICT="APPROVE"
+    break
+  elif echo "$VERDICT_TAIL" | grep -qi "REQUEST_CHANGES\|request.changes"; then
+    log_fail "Review verdict: REQUEST_CHANGES (iter ${ITER})"
+    write_status "ROLE=done" "VERDICT=REQUEST_CHANGES"
+    log_task_entry
+    echo ""
+    echo "Review output: $REVIEW_LOG"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Read the review: cat $REVIEW_LOG"
+    echo "  2. Fix: /develop $TASK — REQUEST_CHANGES fix"
+    echo "  3. Re-review: /review $TASK"
+    exit 1
+  elif echo "$VERDICT_TAIL" | grep -qi "ITERATE"; then
     if [ "$ITER" -lt "$MAX_ITER" ]; then
       log_warn "Review verdict: ITERATE (iter ${ITER}/${MAX_ITER}) — refining..."
       write_status "VERDICT=ITERATE"
@@ -604,21 +721,16 @@ while [ "$ITER" -le "$MAX_ITER" ]; do
       VERDICT="ITERATE_EXHAUSTED"
       break
     fi
-  fi
-
-  if grep -qi "APPROVE" "$REVIEW_LOG" 2>/dev/null; then
-    log_success "Review verdict: APPROVE (iter ${ITER})"
-    VERDICT="APPROVE"
+  else
+    # No recognized verdict — treat as done
+    log_warn "No clear verdict detected in review log"
+    VERDICT="UNKNOWN"
     break
   fi
-
-  # No recognized verdict — treat as done
-  log_warn "No clear verdict detected in review log"
-  VERDICT="UNKNOWN"
-  break
 done
 
 write_status "ROLE=done" "VERDICT=${VERDICT}"
+log_task_entry
 
 # ============================================================
 # Finalize task branch on APPROVE (auto-merge back to original)

@@ -14,10 +14,7 @@ You verify the Developer's work. You do NOT modify code directly.
    - APPROVE → detect git repo(s) → stage all changed files in each repo → commit + push each
    - REQUEST_CHANGES → do NOT commit/push, return to Developer
 7. **Evaluate (APPROVE only):** Write `outputs/evaluations/task-N-eval.md` using templates/evaluation.md
-8. **Log (APPROVE only):** Append one line to `$HOME/.claude/logs/YYYY-MM-DD.md`
-   - Format: `- [HH:MM] **{project_name}** Task N — short summary`
-   - Project name: extracted from current working directory name
-   - Create the file if it doesn't exist yet
+8. (Log is handled automatically by run-task.sh — no manual logging needed)
 
 ## You CAN
 - Read code and diffs
@@ -77,11 +74,19 @@ If you find an issue, do not self-invalidate it.
 - Only Minor issues → APPROVE
 - Functional but below quality bar (UI polish, performance, etc.) → ITERATE (provide specific improvement targets)
 
+## Verdict Output Format
+At the very end of your review output, emit a structured marker on its own line:
+`<!-- FINAL_VERDICT: APPROVE -->`
+Use exactly one of: `APPROVE`, `REQUEST_CHANGES`, `ITERATE`.
+This marker enables reliable automated parsing by the orchestrator.
+
 ## Commit Rules (APPROVE only)
 - Commit + push immediately after APPROVE — do not ask
 - Message format: `type: Task N — short summary`
   - Example: `fix: Task 3 — add error handling`
   - Example: `refactor: Task 5 — extract inline logic`
+- Stage integration commit (epic parallel): `type: Stage N — summary`
+  - Example: `feat: Stage 2 — implement API endpoints and tests`
 - One commit per Task
 - Include handoff/latest.md + review file in the same commit (in the repo where they reside)
 - Never commit/push on REQUEST_CHANGES
