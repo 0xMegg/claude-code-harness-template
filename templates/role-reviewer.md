@@ -60,6 +60,29 @@ Static code review is insufficient for UI/API tasks.
 
 Skip this step for pure logic/refactoring tasks with no UI/API changes.
 
+## Dead-Code Guard (new public API)
+A public prop / flag / export / hook added in this diff MUST have at least
+one call-site that uses it:
+
+- Search for the symbol across `<src_roots>/`. If zero real usages (definition
+  and tests don't count), verdict is **REVISE** — new dead code is not
+  acceptable as "Stage 1 of a multi-stage feature."
+- Exception: the epic plan explicitly declares "Stage X will set this" and
+  the call-site Stage exists in the plan. In that case record "Unused,
+  scheduled for Stage X" under `## Carry over to next Task` and allow APPROVE.
+- Trust the handoff's `## Follow-up call-sites` section — if Developer listed
+  files that should adopt the new API but didn't touch them, verify the
+  Planner scheduled them; otherwise REVISE.
+
+## Long-Running Process Hygiene
+When verifying UI/API tasks, any dev server, watcher, or tunnel started
+during review MUST be terminated before writing the verdict:
+
+1. Start with `run_in_background: true`
+2. Track PID, kill when verification passes, `ps | grep <name>` to confirm
+3. A running dev server across slice boundary is a bug-in-review, not a
+   successful verification — do not APPROVE with leaked processes
+
 ## Anti-Dismissal Rule
 If you find an issue, do not self-invalidate it.
 - If your first impression is "this could be a problem," classify it as Important at minimum
@@ -79,6 +102,25 @@ At the very end of your review output, emit a structured marker on its own line:
 `<!-- FINAL_VERDICT: APPROVE -->`
 Use exactly one of: `APPROVE`, `REQUEST_CHANGES`, `ITERATE`.
 This marker enables reliable automated parsing by the orchestrator.
+
+## Review Log Timestamps (for outlier diagnosis)
+When a review is likely to take longer than the typical 10–15 minute slice
+(large diff, cascading changes, multi-area Epic audit), emit progress
+markers to the review report as you work:
+
+```
+[T+00:00] review start — N files, M hunks
+[T+00:05] build pass (lint + typecheck)
+[T+00:15] test suite pass (X/X)
+[T+00:30] scope check done (X/X files in plan)
+[T+00:45] reviewed hunks X/M
+[T+01:00] verdict decided: APPROVE
+```
+
+Without these, a 72-minute slice is indistinguishable from a hung process
+in post-mortem. Minimum 3 markers for slices expected to exceed 30 min.
+No need for exact clock accuracy — elapsed minutes since review-start is
+enough (you control when to write a marker).
 
 ## Commit Rules (APPROVE only)
 - Commit + push immediately after APPROVE — do not ask
